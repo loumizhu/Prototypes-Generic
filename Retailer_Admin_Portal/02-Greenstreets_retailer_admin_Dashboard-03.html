@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Greenstreets — Retailer Admin · Compliance dashboard (v03, essentials)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/greenstreets-theme.css?v=47">
+<link rel="stylesheet" href="css/retailer-admin.css?v=30">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   DASHBOARD 03 — the essentials only.
+
+   Three blocks, nothing else:
+     1. one verdict sentence,
+     2. the products that fail a PPWR check,
+     3. the suppliers who have not sent their packaging data.
+
+   Deliberately NOT on this page (they live on v02 / the detail pages):
+   KPI band, sparklines, trend chart, supplier funnel, deadlines rail,
+   expiring documents, notification dropdown, scope chips, export chip.
+   Every removal was a decision, not an omission — if you are tempted to add
+   something back, it has to displace one of the three blocks above.
+
+   Type floor 11.5px · status is always glyph + word · all colour via tokens.
+   ══════════════════════════════════════════════════════════════════════════ */
+#d3 .main>*{animation:none!important}
+html.gs-anim-armed #d3 .d3-anim{opacity:0}
+@media (prefers-reduced-motion:reduce){ html.gs-anim-armed #d3 .d3-anim{opacity:1} }
+
+#d3 h1,#d3 h2{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit}
+#d3 h1.pg-title{font-size:24px;font-weight:700;letter-spacing:-.015em}
+#d3 .grp-hdr h2{font-size:13px;font-weight:600}
+#d3 .tbl td,#d3 .d3-fs-n,#d3 .d3-val,#d3 .d3-late{font-variant-numeric:tabular-nums}
+/* this page breathes — more air than the dense v01/v02 listings */
+#d3 .main{padding:20px 26px}
+#d3 .grp-body{padding:0}
+
+/* ── one line of context under the title ───────────────────────────────── */
+.d3-sub{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12px;color:var(--tw2);margin-top:5px}
+.d3-dot{width:6px;height:6px;border-radius:50%;background:var(--status-ok-strong);flex-shrink:0}
+
+/* ── the two headline cards ──────────────────────────────────────────────
+   Two standalone .grp cards side by side, each one a button that opens its
+   own filtered listing. No outer wrapper card and no header strip — a card
+   inside a card reads as two boxes doing one job. The alarm is a 3px
+   severity rule along the top edge. */
+.d3-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+/* height:100% + a column body keep the pair the same height and land both
+   call-to-actions on the same baseline whatever the copy does */
+.d3-card{position:relative;display:block;width:100%;height:100%;text-align:left;cursor:pointer;overflow:hidden;
+  transition:transform .18s,box-shadow .18s,border-color .18s}
+.d3-card:hover{transform:translateY(-2px);box-shadow:var(--sh-2)}
+.d3-card::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;z-index:2;pointer-events:none}
+.d3-card.sev-bad::before{background:linear-gradient(90deg,var(--status-danger),rgba(224,96,90,.22))}
+.d3-card.sev-warn::before{background:linear-gradient(90deg,var(--status-warn),rgba(245,166,35,.22))}
+.d3-card.sev-bad:hover{border-color:rgba(224,96,90,.4)}
+.d3-card.sev-warn:hover{border-color:rgba(245,166,35,.4)}
+.d3-card-body{padding:18px 20px;display:flex;flex-direction:column;height:100%}
+.d3-fs-top{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.d3-fs-ico{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.d3-fs-ico.i-bad{background:rgba(224,96,90,.18);color:#ff9c96;box-shadow:inset 0 0 0 1px rgba(224,96,90,.3)}
+.d3-fs-ico.i-warn{background:rgba(245,166,35,.18);color:#ffcd7a;box-shadow:inset 0 0 0 1px rgba(245,166,35,.3)}
+.d3-fs-lbl{font-size:11.5px;font-weight:600;color:var(--tw2);text-transform:uppercase;letter-spacing:.05em}
+
+/* ── the pie: a donut whose hole carries the headline count ──────────────
+   r=15.9155 makes the circumference exactly 100, so every stroke-dasharray
+   below is a literal percentage and dashoffset 25 starts the first slice at
+   twelve o'clock. */
+.d3-pie-row{display:flex;align-items:center;gap:20px}
+.d3-pie-wrap{position:relative;width:114px;height:114px;flex-shrink:0}
+.d3-pie{width:114px;height:114px;display:block}
+.d3-pie circle{fill:none;stroke-width:5}
+.d3-pie-bg{stroke:rgba(255,255,255,.09)}
+/* slice + legend-swatch colours live in classes, NOT inline styles: an inline
+   style would beat the Light twin's reassertion block, and the dark palette's
+   pale mint is unreadable on a white card. */
+.d3-pie-seg.s-bad{stroke:var(--status-danger)}
+.d3-pie-seg.s-warn{stroke:var(--status-warn)}
+.d3-pie-seg.s-ok{stroke:var(--status-ok)}
+.d3-pie-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.d3-fs-n{font-size:30px;font-weight:700;line-height:1;letter-spacing:-.025em;color:var(--tw)}
+.d3-pie-den{font-size:11.5px;color:var(--tw2);margin-top:4px}
+.d3-fs-legend{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}
+.d3-lg{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--tw2);line-height:1.3}
+.d3-lg-sw{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.d3-lg-sw.s-bad{background:var(--status-danger)}
+.d3-lg-sw.s-warn{background:var(--status-warn)}
+.d3-lg-sw.s-ok{background:var(--status-ok)}
+.d3-lg-n{font-weight:700;color:var(--tw);min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.d3-card-go{display:inline-flex;align-items:center;gap:6px;margin-top:auto;padding-top:16px;
+  font-size:12px;font-weight:600;color:var(--status-info);align-self:flex-start}
+.d3-card:hover .d3-card-go{text-decoration:underline}
+
+/* ── status chip: glyph + word, never colour alone ─────────────────────── */
+.d3-st{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+  padding:3px 10px 3px 6px;border-radius:20px;white-space:nowrap;border:1px solid}
+.d3-st i{font-style:normal;font-size:10px;line-height:1;width:15px;height:15px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700}
+.d3-st-bad{background:rgba(224,96,90,.14);color:#ff9c96;border-color:rgba(224,96,90,.36)}
+.d3-st-bad i{background:rgba(224,96,90,.3)}
+.d3-st-warn{background:rgba(245,166,35,.13);color:#ffcd7a;border-color:rgba(245,166,35,.34)}
+.d3-st-warn i{background:rgba(245,166,35,.3)}
+.d3-st-ok{background:rgba(78,187,129,.13);color:var(--gs-l);border-color:rgba(78,187,129,.32)}
+.d3-st-ok i{background:rgba(78,187,129,.28)}
+
+/* ── card headers carry the count — no separate KPI band ───────────────── */
+.d3-count{font-size:12px;font-weight:600;color:var(--tw2);text-transform:none;letter-spacing:0}
+.d3-count b{color:var(--tw)}
+.d3-hdr-link{margin-left:auto;font-size:12px;font-weight:500;color:var(--status-info);cursor:pointer;
+  text-transform:none;letter-spacing:0;white-space:nowrap}
+.d3-hdr-link:hover{text-decoration:underline}
+
+/* ── the one filter this page allows: which PPWR article ───────────────── */
+.d3-chips{display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--line)}
+.d3-chip{font-size:11.5px;font-weight:600;height:30px;padding:0 12px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--tw2);transition:all .14s;white-space:nowrap}
+.d3-chip:hover{background:rgba(255,255,255,.08);color:var(--tw)}
+.d3-chip.on{background:rgba(var(--gs-rgb),.16);border-color:rgba(var(--gs-rgb),.42);color:var(--gs-l)}
+
+/* ── the two listings ──────────────────────────────────────────────────── */
+#d3 .tbl th{font-size:11.5px;color:var(--tw2);padding:11px 18px}
+#d3 .tbl td{font-size:13px;color:var(--tw2);padding:11px 18px;vertical-align:middle;line-height:1.35}
+#d3 .tbl-name{font-size:13px}
+.d3-sku{font-weight:600;color:var(--tw)}
+.d3-desc{font-size:11.5px;color:var(--tw2);margin-top:2px}
+.d3-art{font-weight:600;color:var(--tw)}
+.d3-art-s{font-size:11.5px;color:var(--tw2);margin-top:2px}
+/* measured vs required — the pair is the point, so they sit together */
+.d3-val{font-size:14px;font-weight:700;color:var(--status-danger);line-height:1.1}
+.d3-val.warn{color:var(--status-warn)}
+.d3-req{font-size:11.5px;color:var(--tw2);margin-top:2px}
+.d3-late{font-size:14px;font-weight:700;color:var(--status-danger);line-height:1.1}
+.d3-late-s{font-size:11.5px;color:var(--tw2);margin-top:2px}
+.d3-row-hidden{display:none}
+.d3-foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;
+  align-items:center;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--tw2)}
+.d3-foot b{color:var(--tw)}
+.d3-act{height:32px;padding:0 13px;font-size:11.5px;font-weight:600;border-radius:8px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:all .13s;
+  border:1px solid rgba(91,156,246,.4);background:rgba(91,156,246,.12);color:var(--status-info)}
+.d3-act:hover{background:rgba(91,156,246,.22);border-color:rgba(91,156,246,.62)}
+.d3-act.urgent{border-color:rgba(224,96,90,.42);background:rgba(224,96,90,.13);color:#ff9c96}
+.d3-act.urgent:hover{background:rgba(224,96,90,.22)}
+.d3-done{font-size:11.5px;font-weight:600;color:var(--status-ok);display:inline-flex;align-items:center;gap:6px}
+.d3-empty{padding:40px 20px;text-align:center;display:none}
+.d3-empty.on{display:block}
+.d3-empty-i{width:44px;height:44px;margin:0 auto 13px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:rgba(var(--gs-rgb),.14);color:var(--gs-l);border:1px solid rgba(var(--gs-rgb),.3)}
+.d3-empty-t{font-size:14px;font-weight:600;color:var(--tw)}
+.d3-empty-s{font-size:12px;color:var(--tw2);margin-top:6px}
+
+/* ── responsive: the tables scroll, the targets grow ───────────────────── */
+#d3 .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media (max-width:1100px){
+  .d3-pie-row{gap:14px}
+  .d3-pie-wrap,.d3-pie{width:100px;height:100px}
+  #d3 .tbl{min-width:720px}
+}
+@media (max-width:900px){
+  #d3 .app-body{flex-direction:column}
+  #d3 .sidebar{width:100%;flex-direction:row;overflow-x:auto}
+  #d3 .main{padding:16px}
+  .d3-cards{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+  .d3-card-body{padding:15px 16px}
+  .d3-pie-row{gap:12px}
+  .d3-pie-wrap,.d3-pie{width:92px;height:92px}
+  .d3-fs-n{font-size:25px}
+  .d3-lg{font-size:11.5px}
+  #d3 .btn-p,#d3 .btn-g,.d3-act,.d3-chip{min-height:40px}
+}
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.add('gs-anim-armed');</script>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs><symbol id="gsi-0" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol><symbol id="gsi-1" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></symbol><symbol id="gsi-2" viewBox="0 0 24 24"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></symbol><symbol id="gsi-3" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol><symbol id="gsi-4" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol><symbol id="gsi-5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol><symbol id="gsi-6" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol><symbol id="gsi-7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></symbol><symbol id="gsi-8" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414A1 1 0 0 1 19 9.414V19a2 2 0 0 1-2 2z"/></symbol><symbol id="gsi-9" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol><symbol id="gsi-10" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol><symbol id="gsi-11" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></symbol><symbol id="gsi-12" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="gsi-13" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></symbol><symbol id="gsi-14" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol><symbol id="gsi-15" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="gsi-16" viewBox="0 0 24 24"><path d='M12 5v14M5 12h14'/></symbol><symbol id="gsi-17" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></symbol><symbol id="gsi-18" viewBox="0 0 24 24"><path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/></symbol><symbol id="gsi-19" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol><symbol id="gsi-20" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol><symbol id="gsi-21" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></symbol><symbol id="gsi-22" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></symbol><symbol id="gsi-23" viewBox="0 0 24 24"><path d="M20.38 18.57L12 13 3.62 18.57A2 2 0 0 0 5 22h14a2 2 0 0 0 1.38-3.43zM12 2a2 2 0 0 1 2 2c0 1.5-2 3-2 3s-2-1.5-2-3a2 2 0 0 1 2-2z"/></symbol><symbol id="gsi-24" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol><symbol id="gsi-25" viewBox="0 0 24 24"><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='17 8 12 3 7 8'/></symbol><symbol id="gsi-26" viewBox="0 0 24 24"><path d='M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z'/></symbol><symbol id="gsi-27" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></symbol><symbol id="gsi-28" viewBox="0 0 24 24"><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/></symbol><symbol id="gsi-29" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></symbol><symbol id="gsi-30" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol><symbol id="gsi-31" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol><symbol id="gsi-32" viewBox="0 0 50 50"><path d="M14.03125 0C13.71875 0.0546875 13.453125 0.253906 13.308594 0.539063C13.167969 0.820313 13.167969 1.15625 13.3125 1.4375L15.5 5.84375C15.652344 6.175781 15.976563 6.402344 16.34375 6.425781C16.707031 6.449219 17.058594 6.269531 17.253906 5.960938C17.449219 5.648438 17.460938 5.257813 17.28125 4.9375L15.09375 0.5625C14.90625 0.160156 14.472656 -0.0703125 14.03125 0 Z M 35.65625 0C35.328125 0.0507813 35.046875 0.261719 34.90625 0.5625L32.71875 4.9375C32.539063 5.257813 32.550781 5.648438 32.746094 5.960938C32.941406 6.269531 33.292969 6.449219 33.65625 6.425781C34.023438 6.402344 34.347656 6.175781 34.5 5.84375L36.6875 1.4375C36.851563 1.105469 36.820313 0.710938 36.605469 0.40625C36.390625 0.105469 36.023438 -0.0507813 35.65625 0 Z M 21 10.90625C17.003906 10.90625 13.691406 13.875 13.125 17.84375C13.113281 17.855469 13.105469 17.863281 13.09375 17.875L10.03125 41L7 41C6.96875 41 6.9375 41 6.90625 41C6.390625 41.046875 5.996094 41.480469 6 42L6 49C6 49.550781 6.449219 50 7 50L43 50C43.550781 50 44 49.550781 44 49L44 42C44 41.449219 43.550781 41 43 41L39.78125 41L36.6875 17.875C36.6875 17.863281 36.6875 17.855469 36.6875 17.84375C36.117188 13.855469 32.671875 11.019531 28.625 10.90625C28.613281 10.90625 28.605469 10.90625 28.59375 10.90625 Z M 49.0625 10.9375C48.976563 10.949219 48.894531 10.96875 48.8125 11C48.726563 11.019531 48.640625 11.050781 48.5625 11.09375L44.15625 13.3125C43.824219 13.464844 43.597656 13.789063 43.574219 14.15625C43.550781 14.519531 43.730469 14.871094 44.039063 15.066406C44.351563 15.261719 44.742188 15.273438 45.0625 15.09375L49.4375 12.90625C49.960938 12.78125 50.292969 12.269531 50.191406 11.742188C50.089844 11.214844 49.59375 10.859375 49.0625 10.9375 Z M 0.78125 11C0.34375 11.074219 0.0078125 11.429688 -0.0429688 11.871094C-0.0898438 12.3125 0.152344 12.734375 0.5625 12.90625L4.9375 15.09375C5.257813 15.273438 5.648438 15.261719 5.960938 15.066406C6.269531 14.871094 6.449219 14.519531 6.425781 14.15625C6.402344 13.789063 6.175781 13.464844 5.84375 13.3125L1.4375 11.09375C1.261719 11.007813 1.066406 10.976563 0.875 11C0.84375 11 0.8125 11 0.78125 11 Z M 21 12.90625L28.59375 12.90625C31.722656 13.007813 34.277344 15.140625 34.71875 18.125L34.71875 18.15625L37.75 41L12.0625 41L15.09375 18.15625L15.09375 18.125C15.539063 15.109375 18.003906 12.90625 21 12.90625 Z M 44.46875 26.375C44.4375 26.382813 44.40625 26.394531 44.375 26.40625C43.960938 26.5 43.648438 26.84375 43.601563 27.265625C43.550781 27.6875 43.773438 28.09375 44.15625 28.28125L48.5625 30.5C48.886719 30.710938 49.304688 30.71875 49.632813 30.519531C49.964844 30.316406 50.148438 29.941406 50.105469 29.554688C50.0625 29.171875 49.804688 28.84375 49.4375 28.71875L45.0625 26.5C44.882813 26.398438 44.675781 26.355469 44.46875 26.375 Z M 5.21875 26.40625C5.121094 26.421875 5.027344 26.453125 4.9375 26.5L0.5625 28.71875C0.195313 28.84375 -0.0625 29.171875 -0.105469 29.554688C-0.148438 29.941406 0.0351563 30.316406 0.367188 30.519531C0.695313 30.71875 1.113281 30.710938 1.4375 30.5L5.84375 28.28125C6.28125 28.054688 6.488281 27.542969 6.335938 27.074219C6.179688 26.609375 5.703125 26.324219 5.21875 26.40625 Z M 8 43L42 43L42 48L8 48Z" fill="currentColor"/></symbol></defs></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
+<symbol id="d3i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+<symbol id="d3i-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+<symbol id="d3i-truck" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></symbol>
+<symbol id="d3i-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+</defs></svg>
+<div class="screen on" id="d3">
+  <div class="app-body">
+    <div class="sidebar">
+  <div class="sb-logo-zone"><img class="gs-logo-img sb-logo" src="" alt="Greenstreets"></div>
+  <div class="sb-section">Retailer Admin</div>
+  <a class="nav-item active" onclick="go('ra1_v3')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-0"/></svg>Dashboard</a>
+<a class="nav-item" onclick="go('ra7')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-6"/></svg>Users</a>
+<a class="nav-item" onclick="go('ra4')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-1"/></svg>Suppliers</a>
+<a class="nav-item" onclick="go('ra6')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-2"/></svg>Products</a>
+<a class="nav-item" onclick="go('ra5')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-3"/></svg>Packagings</a>
+
+<a class="nav-item" onclick="go('ra13')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-4"/></svg>Documents</a>
+
+  <div class="sb-divider"></div>
+  <a class="nav-item" onclick="go('ra_config')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-7"/></svg> Settings</a>
+  <a class="nav-item" onclick="go('ra15')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-8"/></svg> Audit log</a>
+  <div class="sb-notif-row" onclick="go('ra16')">
+    <div class="sb-bell-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-9"/></svg><span class="bell-badge">4</span></div>
+    <span class="sb-notif-label">Notifications</span>
+  </div>
+  <div class="sb-user" onclick="go('ra_config')" style="cursor:pointer" title="Account settings">
+    <div class="sb-avatar" style="background:var(--status-info-strong)">KO</div>
+    <div class="sb-user-info">
+      <div class="sb-user-name">Keith O'Sullivan</div>
+      <div class="sb-user-role">Retailer Admin · <span style="color:var(--gs)">Northbridge</span></div>
+    </div>
+    <button class="sb-logout" onclick="event.stopPropagation()" title="Log out"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#gsi-10"/></svg></button>
+  </div>
+</div>
+    <div class="main">
+
+      <!-- ══ 1 · HEADER — title, freshness, one way out ═════════════════ -->
+      <div class="pg-hdr-bar d3-anim" style="margin-bottom:14px">
+        <div>
+          <h1 class="pg-title">Compliance dashboard</h1>
+          <div class="d3-sub">
+            <span>Northbridge Retail Ltd · Q3 FY26</span>
+            <span style="opacity:.45">|</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><span class="d3-dot"></span>Updated 09:12, 4 min ago</span>
+          </div>
+        </div>
+        <div class="pg-actions" style="display:flex;gap:8px;align-items:center">
+          <button class="btn-g" onclick="go('ra1_v2')" title="The detailed dashboard: trends, deadlines, funnel, documents" style="height:32px;padding:0 12px;font-size:11.5px;display:inline-flex;align-items:center;gap:6px">
+            More detail
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#gsi-10"/></svg>
+          </button>
+          <button class="btn-g" onclick="go('ra16')" title="Notifications" aria-label="Notifications" style="height:32px;padding:0 11px;display:inline-flex;align-items:center;position:relative">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><use href="#gsi-9"/></svg>
+            <span class="bell-badge" style="position:absolute;top:-5px;right:-3px">4</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ══ 2 · THE TWO HEADLINE CARDS ═════════════════════════════════
+           One card per problem, each a donut of the whole population so the
+           share is readable, not just the count, and each one a link into
+           its own pre-filtered listing:
+             · products  -> Products, status filter applied + sorted by status
+             · suppliers -> Suppliers, sorted by Last activity descending, so
+                            the least-recently-active sit at the top
+           The sort intents are handled by applyRaFilter() in retailer-admin.js.
+           ═════════════════════════════════════════════════════════════ -->
+      <div class="d3-cards">
+
+        <!-- 5 non-conformant + 8 at risk + 51 passing = 64 products -->
+        <button class="grp d3-card sev-bad d3-anim"
+                onclick="goFilter('ra6',{selectValue:'Incomplete',ptSort:{scope:'ra',col:'status',dir:'asc'}})"
+                title="Open Products, filtered to the failing status and sorted by status">
+          <div class="d3-card-body">
+            <div class="d3-fs-top">
+              <span class="d3-fs-ico i-bad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><use href="#d3i-box"/></svg></span>
+              <span class="d3-fs-lbl">Products that do not meet PPWR</span>
+            </div>
+            <div class="d3-pie-row">
+              <div class="d3-pie-wrap">
+                <svg class="d3-pie" viewBox="0 0 42 42" role="img"
+                     aria-label="Of 64 products: 5 non-conformant, 8 at risk, 51 pass every check">
+                  <circle class="d3-pie-bg" cx="21" cy="21" r="15.9155"/>
+                  <circle class="d3-pie-seg s-bad" cx="21" cy="21" r="15.9155"
+                          stroke-dasharray="7.81 92.19" stroke-dashoffset="25"/>
+                  <circle class="d3-pie-seg s-warn" cx="21" cy="21" r="15.9155"
+                          stroke-dasharray="12.5 87.5" stroke-dashoffset="17.19"/>
+                  <circle class="d3-pie-seg s-ok" cx="21" cy="21" r="15.9155"
+                          stroke-dasharray="79.69 20.31" stroke-dashoffset="4.69"/>
+                </svg>
+                <div class="d3-pie-mid">
+                  <div class="d3-fs-n">13</div>
+                  <div class="d3-pie-den">of 64</div>
+                </div>
+              </div>
+              <div class="d3-fs-legend">
+                <div class="d3-lg"><span class="d3-lg-sw s-bad"></span><span class="d3-lg-n">5</span><span>Non-conformant</span></div>
+                <div class="d3-lg"><span class="d3-lg-sw s-warn"></span><span class="d3-lg-n">8</span><span>At risk</span></div>
+                <div class="d3-lg"><span class="d3-lg-sw s-ok"></span><span class="d3-lg-n">51</span><span>Pass every check</span></div>
+              </div>
+            </div>
+            <span class="d3-card-go">Open the filtered product list
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><use href="#d3i-chev"/></svg>
+            </span>
+          </div>
+        </button>
+
+        <!-- 12 overdue + 109 still in window + 259 submitted = 380 suppliers -->
+        <button class="grp d3-card sev-warn d3-anim"
+                onclick="goFilter('ra4',{sortHeader:{text:'Last activity',dir:'desc'}})"
+                title="Open Suppliers, sorted by Last activity descending — the least active first">
+          <div class="d3-card-body">
+            <div class="d3-fs-top">
+              <span class="d3-fs-ico i-warn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><use href="#d3i-truck"/></svg></span>
+              <span class="d3-fs-lbl">Suppliers not sending their data</span>
+            </div>
+            <div class="d3-pie-row">
+              <div class="d3-pie-wrap">
+                <svg class="d3-pie" viewBox="0 0 42 42" role="img"
+                     aria-label="Of 380 suppliers: 12 overdue, 109 still inside their window, 259 have submitted">
+                  <circle class="d3-pie-bg" cx="21" cy="21" r="15.9155"/>
+                  <circle class="d3-pie-seg s-bad" cx="21" cy="21" r="15.9155"
+                          stroke-dasharray="3.16 96.84" stroke-dashoffset="25"/>
+                  <circle class="d3-pie-seg s-warn" cx="21" cy="21" r="15.9155"
+                          stroke-dasharray="28.68 71.32" stroke-dashoffset="21.84"/>
+                  <circle class="d3-pie-seg s-ok" cx="21" cy="21" r="15.9155"
+                          stroke-dasharray="68.16 31.84" stroke-dashoffset="93.16"/>
+                </svg>
+                <div class="d3-pie-mid">
+                  <div class="d3-fs-n">12</div>
+                  <div class="d3-pie-den">overdue</div>
+                </div>
+              </div>
+              <div class="d3-fs-legend">
+                <div class="d3-lg"><span class="d3-lg-sw s-bad"></span><span class="d3-lg-n">12</span><span>Overdue — blocking 21 products</span></div>
+                <div class="d3-lg"><span class="d3-lg-sw s-warn"></span><span class="d3-lg-n">109</span><span>Not sent, still in window</span></div>
+                <div class="d3-lg"><span class="d3-lg-sw s-ok"></span><span class="d3-lg-n">259</span><span>Data received</span></div>
+              </div>
+            </div>
+            <span class="d3-card-go">Open Suppliers by last activity
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><use href="#d3i-chev"/></svg>
+            </span>
+          </div>
+        </button>
+      </div>
+
+      <!-- ══ 3 · PRODUCTS THAT DO NOT MEET PPWR ════════════════════════
+           All 13 are listed — a truncated list would just send the reader
+           somewhere else, which is more work, not less. Article numbering
+           follows this portal's own PPWR checklist (Generate DoC page):
+           Art. 5 PFAS · Art. 6 hazardous substances · Art. 7 recycled
+           content · Art. 9 recyclability by design · Art. 10 minimisation.
+           ═════════════════════════════════════════════════════════════ -->
+      <div class="grp d3-anim" id="d3-ppwr" style="margin-bottom:16px">
+        <div class="grp-hdr">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="flex-shrink:0;opacity:.8"><use href="#d3i-box"/></svg>
+          <h2>Products that do not meet PPWR</h2>
+          <span class="d3-count"><b>13</b> of 64</span>
+          <span class="d3-hdr-link" onclick="go('ra6')">Open the full catalogue →</span>
+        </div>
+
+        <!-- the only filter on this page: which requirement is failing -->
+        <div class="d3-chips" role="group" aria-label="Filter by PPWR article">
+          <button class="d3-chip on" data-art="all" onclick="d3Art(this)">All 13</button>
+          <button class="d3-chip" data-art="5" onclick="d3Art(this)">Art. 5 · PFAS · 2</button>
+          <button class="d3-chip" data-art="7" onclick="d3Art(this)">Art. 7 · Recycled content · 6</button>
+          <button class="d3-chip" data-art="9" onclick="d3Art(this)">Art. 9 · Recyclability · 3</button>
+          <button class="d3-chip" data-art="10" onclick="d3Art(this)">Art. 10 · Minimisation · 2</button>
+        </div>
+
+        <div class="grp-body">
+          <div class="tbl-scroll">
+            <table class="tbl" data-nosort>
+              <colgroup><col width="30%"><col width="24%"><col width="19%"><col width="12%"><col width="15%"></colgroup>
+              <thead><tr>
+                <th scope="col">Product &amp; packaging</th>
+                <th scope="col">PPWR requirement</th>
+                <th scope="col">Measured vs required</th>
+                <th scope="col">Status</th>
+                <th scope="col">Next step</th>
+              </tr></thead>
+              <tbody id="d3-ppwr-body">
+
+                <tr data-art="5" onclick="openProductRA('NBR-003-RED')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-003-RED · Red Midi Dress</div><div class="d3-desc">Poly bag · Orvane Packaging Co.</div></td>
+                  <td><div class="d3-art">Art. 5</div><div class="d3-art-s">PFAS limits for food-contact packaging</div></td>
+                  <td><div class="d3-val">Not tested</div><div class="d3-req">required ≤ 25 ppb</div></td>
+                  <td><span class="d3-st d3-st-bad"><i>✕</i>Fails</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act urgent" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="5" onclick="openProductRA('NBR-011-GRN')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-011-GRN · Green Linen Shirt</div><div class="d3-desc">Swing tag · Kelvara GmbH</div></td>
+                  <td><div class="d3-art">Art. 5</div><div class="d3-art-s">PFAS limits for food-contact packaging</div></td>
+                  <td><div class="d3-val">34 ppb</div><div class="d3-req">required ≤ 25 ppb</div></td>
+                  <td><span class="d3-st d3-st-bad"><i>✕</i>Fails</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act urgent" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="7" onclick="openProductRA('NBR-002-BLU')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-002-BLU · Blue Slim Fit Jeans</div><div class="d3-desc">Poly bag · Orvane Packaging Co.</div></td>
+                  <td><div class="d3-art">Art. 7</div><div class="d3-art-s">Recycled content minimum targets</div></td>
+                  <td><div class="d3-val">0% PCR</div><div class="d3-req">required ≥ 30%</div></td>
+                  <td><span class="d3-st d3-st-bad"><i>✕</i>Fails</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act urgent" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="7" onclick="openProductRA('NBR-004-KHA')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-004-KHA · Khaki Utility Jacket</div><div class="d3-desc">Hanger · Sylvana S.A.</div></td>
+                  <td><div class="d3-art">Art. 7</div><div class="d3-art-s">Recycled content minimum targets</div></td>
+                  <td><div class="d3-val">0% PCR</div><div class="d3-req">required ≥ 30%</div></td>
+                  <td><span class="d3-st d3-st-bad"><i>✕</i>Fails</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act urgent" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="7" onclick="openProductRA('NBR-019-NVY')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-019-NVY · Navy Chino Shorts</div><div class="d3-desc">Poly bag · Selvic Poly Films</div></td>
+                  <td><div class="d3-art">Art. 7</div><div class="d3-art-s">Recycled content minimum targets</div></td>
+                  <td><div class="d3-val">12% PCR</div><div class="d3-req">required ≥ 30%</div></td>
+                  <td><span class="d3-st d3-st-bad"><i>✕</i>Fails</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act urgent" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="7" onclick="openProductRA('NBR-027-WHT')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-027-WHT · White Poplin Shirt</div><div class="d3-desc">Poly bag · Selvic Poly Films</div></td>
+                  <td><div class="d3-art">Art. 7</div><div class="d3-art-s">Recycled content minimum targets</div></td>
+                  <td><div class="d3-val warn">22% PCR</div><div class="d3-req">required ≥ 30%</div></td>
+                  <td><span class="d3-st d3-st-warn"><i>!</i>At risk</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="7" onclick="openProductRA('NBR-031-GRY')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-031-GRY · Grey Marl Joggers</div><div class="d3-desc">Poly bag · Velantis Manufacturing</div></td>
+                  <td><div class="d3-art">Art. 7</div><div class="d3-art-s">Recycled content minimum targets</div></td>
+                  <td><div class="d3-val warn">26% PCR</div><div class="d3-req">required ≥ 30%</div></td>
+                  <td><span class="d3-st d3-st-warn"><i>!</i>At risk</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="7" onclick="openProductRA('NBR-038-PNK')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-038-PNK · Pink Ribbed Top</div><div class="d3-desc">Poly bag · Velantis Manufacturing</div></td>
+                  <td><div class="d3-art">Art. 7</div><div class="d3-art-s">Recycled content minimum targets</div></td>
+                  <td><div class="d3-val warn">28% PCR</div><div class="d3-req">required ≥ 30%</div></td>
+                  <td><span class="d3-st d3-st-warn"><i>!</i>At risk</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="9" onclick="openProductRA('NBR-022-BLK')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-022-BLK · Black Ankle Boots</div><div class="d3-desc">Shipping carton · Havlund Packaging</div></td>
+                  <td><div class="d3-art">Art. 9</div><div class="d3-art-s">Recyclability by design</div></td>
+                  <td><div class="d3-val warn">Grade C</div><div class="d3-req">required Grade B or better</div></td>
+                  <td><span class="d3-st d3-st-warn"><i>!</i>At risk</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="9" onclick="openProductRA('NBR-045-TAN')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-045-TAN · Tan Leather Belt</div><div class="d3-desc">Swing tag · Kelvara GmbH</div></td>
+                  <td><div class="d3-art">Art. 9</div><div class="d3-art-s">Recyclability by design</div></td>
+                  <td><div class="d3-val warn">Grade C</div><div class="d3-req">required Grade B or better</div></td>
+                  <td><span class="d3-st d3-st-warn"><i>!</i>At risk</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="9" onclick="openProductRA('NBR-052-BLU')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-052-BLU · Blue Denim Jacket</div><div class="d3-desc">Hanger · Sylvana S.A.</div></td>
+                  <td><div class="d3-art">Art. 9</div><div class="d3-art-s">Recyclability by design</div></td>
+                  <td><div class="d3-val warn">PP + PS, not separable</div><div class="d3-req">required mono-material</div></td>
+                  <td><span class="d3-st d3-st-warn"><i>!</i>At risk</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="10" onclick="openProductRA('NBR-058-RED')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-058-RED · Red Wool Scarf</div><div class="d3-desc">Shipping carton · Havlund Packaging</div></td>
+                  <td><div class="d3-art">Art. 10</div><div class="d3-art-s">Packaging minimisation</div></td>
+                  <td><div class="d3-val warn">68% empty space</div><div class="d3-req">required ≤ 50%</div></td>
+                  <td><span class="d3-st d3-st-warn"><i>!</i>At risk</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+
+                <tr data-art="10" onclick="openProductRA('NBR-061-BLK')" title="Open product detail">
+                  <td><div class="d3-sku">NBR-061-BLK · Black Tote Bag</div><div class="d3-desc">Tissue paper · Estveld Paper OÜ</div></td>
+                  <td><div class="d3-art">Art. 10</div><div class="d3-art-s">Packaging minimisation</div></td>
+                  <td><div class="d3-val warn">3 layers</div><div class="d3-req">2 justified — 1 to remove</div></td>
+                  <td><span class="d3-st d3-st-warn"><i>!</i>At risk</span></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Data requested')">Request missing data</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d3-empty" id="d3-ppwr-empty">
+            <div class="d3-empty-i"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><use href="#gsi-19"/></svg></div>
+            <div class="d3-empty-t">No product fails this requirement</div>
+            <div class="d3-empty-s">Switch back to <b>All 13</b> to see the rest.</div>
+          </div>
+          <div class="d3-foot">
+            <span id="d3-ppwr-foot"><b>13</b> of 64 products · 5 non-conformant · 8 at risk · the other <b>51</b> pass every check</span>
+            <span class="d3-hdr-link" style="margin-left:0" onclick="go('ra11')">Open the compliance review →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 4 · SUPPLIERS WHO HAVE NOT SENT THEIR DATA ════════════════
+           The 12 overdue ones, worst first. Not the 109 outstanding — being
+           outstanding is normal, being overdue is the problem.
+           ═════════════════════════════════════════════════════════════ -->
+      <div class="grp d3-anim" id="d3-sup">
+        <div class="grp-hdr">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="flex-shrink:0;opacity:.8"><use href="#d3i-truck"/></svg>
+          <h2>Suppliers who have not sent their packaging data</h2>
+          <span class="d3-count"><b>12</b> overdue</span>
+          <span class="d3-hdr-link" onclick="go('ra9')">Open the tracker →</span>
+        </div>
+        <div class="grp-body">
+          <div class="tbl-scroll">
+            <table class="tbl" data-nosort>
+              <colgroup><col width="26%"><col width="24%"><col width="12%"><col width="23%"><col width="15%"></colgroup>
+              <thead><tr>
+                <th scope="col">Supplier</th>
+                <th scope="col">What is missing</th>
+                <th scope="col">Overdue</th>
+                <th scope="col">Last activity</th>
+                <th scope="col">Next step</th>
+              </tr></thead>
+              <tbody>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Orvane Packaging Co.</div><div class="d3-desc">orvane@pack.cn</div></td>
+                  <td>Poly bag data<div class="d3-desc">blocks 4 products</div></td>
+                  <td><div class="d3-late">21 days</div><div class="d3-late-s">due 07 Aug</div></td>
+                  <td>Opened 14 Jun<div class="d3-desc">never submitted · 2 reminders</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act urgent" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Havlund Box AB</div><div class="d3-desc">info@havlundbox.ie</div></td>
+                  <td>All components<div class="d3-desc">blocks 3 products</div></td>
+                  <td><div class="d3-late">18 days</div><div class="d3-late-s">due 10 Aug</div></td>
+                  <td>Never opened<div class="d3-desc">2 reminders sent</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act urgent" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Sylvana S.A.</div><div class="d3-desc">contact@sylvana.ie</div></td>
+                  <td>Swing tag + hanger<div class="d3-desc">blocks 2 products</div></td>
+                  <td><div class="d3-late">14 days</div><div class="d3-late-s">due 14 Aug</div></td>
+                  <td>Never opened<div class="d3-desc">1 reminder sent</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Tanvel TextilePack</div><div class="d3-desc">tanvelpack@textile.cn</div></td>
+                  <td>Shipping carton<div class="d3-desc">blocks 3 products</div></td>
+                  <td><div class="d3-late">11 days</div><div class="d3-late-s">due 17 Aug</div></td>
+                  <td>Opened 12 Jun<div class="d3-desc">partial submission</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Selvic Poly Films</div><div class="d3-desc">sales@selvicpoly.cn</div></td>
+                  <td>Recycled-content evidence<div class="d3-desc">blocks 2 products</div></td>
+                  <td><div class="d3-late">9 days</div><div class="d3-late-s">due 19 Aug</div></td>
+                  <td>Opened 18 Aug<div class="d3-desc">no data entered</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Estveld Paper OÜ</div><div class="d3-desc">info@estveldpaper.ee</div></td>
+                  <td>Tissue paper data<div class="d3-desc">blocks 1 product</div></td>
+                  <td><div class="d3-late">8 days</div><div class="d3-late-s">due 20 Aug</div></td>
+                  <td>Never opened<div class="d3-desc">1 reminder sent</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Seltan Tekstil A.Ş.</div><div class="d3-desc">export@seltantekstil.tr</div></td>
+                  <td>Hanger data<div class="d3-desc">blocks 1 product</div></td>
+                  <td><div class="d3-late">7 days</div><div class="d3-late-s">due 21 Aug</div></td>
+                  <td>Opened 20 Jun<div class="d3-desc">no data entered</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Cartonex Ibérica SL</div><div class="d3-desc">ops@cartonex.es</div></td>
+                  <td>Shipping carton<div class="d3-desc">blocks 1 product</div></td>
+                  <td><div class="d3-late">6 days</div><div class="d3-late-s">due 22 Aug</div></td>
+                  <td>Never opened<div class="d3-desc">no reminder sent yet</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Marven Poly Ltd.</div><div class="d3-desc">info@marvenpoly.bd</div></td>
+                  <td>Poly bag data<div class="d3-desc">blocks 1 product</div></td>
+                  <td><div class="d3-late">5 days</div><div class="d3-late-s">due 23 Aug</div></td>
+                  <td>Opened 21 Aug<div class="d3-desc">no data entered</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Veyla Labels Pvt</div><div class="d3-desc">hello@veylalabels.in</div></td>
+                  <td>Swing tag data<div class="d3-desc">blocks 1 product</div></td>
+                  <td><div class="d3-late">4 days</div><div class="d3-late-s">due 24 Aug</div></td>
+                  <td>Never opened<div class="d3-desc">no reminder sent yet</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Alvare Embalagens</div><div class="d3-desc">geral@alvareemb.pt</div></td>
+                  <td>Tissue paper data<div class="d3-desc">blocks 1 product</div></td>
+                  <td><div class="d3-late">3 days</div><div class="d3-late-s">due 25 Aug</div></td>
+                  <td>Opened 24 Jun<div class="d3-desc">no data entered</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+                <tr onclick="go('ra_supdetail')" title="Open supplier detail">
+                  <td><div class="d3-sku">Brevno Opakowania</div><div class="d3-desc">biuro@brevnopak.pl</div></td>
+                  <td>Poly bag data<div class="d3-desc">blocks 1 product</div></td>
+                  <td><div class="d3-late">2 days</div><div class="d3-late-s">due 26 Aug</div></td>
+                  <td>Never opened<div class="d3-desc">no reminder sent yet</div></td>
+                  <td onclick="event.stopPropagation()"><button class="d3-act" onclick="d3Handled(this,'Reminder sent')">Send reminder</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d3-foot">
+            <span><b>12</b> of 380 suppliers are overdue · between them they hold data for <b>21 products</b> · <b>121</b> have not sent data at all, the other 109 of those are still inside their window</span>
+            <span class="d3-hdr-link" style="margin-left:0" onclick="go('ra8')">Send a bulk reminder →</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/retailer-admin.js?v=36"></script>
+<script src="js/greenstreets-theme.js?v=28"></script>
+<script src="js/gs-appearance.js?v=9"></script>
+<script>
+/* Register this essentials dashboard with the shared router without touching
+   the shared file. The -Light glue resolves the twin from GS_PAGES at click time. */
+if (window.GS_PAGES){
+  window.GS_PAGES['ra1_v3'] = '02-Greenstreets_retailer_admin_Dashboard-03.html';
+  window.GS_PAGES['ra1_v2'] = '02-Greenstreets_retailer_admin_Dashboard-02.html';
+}
+
+/* ── the one filter: which PPWR article is failing ───────────────────────
+   Counts live in the chip labels and are recomputed, so handling a row keeps
+   the numbers honest. */
+function d3Art(btn){
+  var art = btn.getAttribute('data-art');
+  document.querySelectorAll('.d3-chip').forEach(function(b){
+    var on = b === btn; b.classList.toggle('on', on);
+  });
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#d3-ppwr-body tr'));
+  var shown = 0;
+  rows.forEach(function(r){
+    var hit = (art === 'all') || (r.getAttribute('data-art') === art);
+    r.classList.toggle('d3-row-hidden', !hit);
+    if(hit) shown++;
+  });
+  document.getElementById('d3-ppwr-empty').classList.toggle('on', shown === 0);
+
+  var foot = document.getElementById('d3-ppwr-foot');
+  if(art === 'all'){
+    foot.innerHTML = '<b>13</b> of 64 products · 5 non-conformant · 8 at risk · the other <b>51</b> pass every check';
+  } else {
+    var name = ({'5':'PFAS limits','7':'recycled content','9':'recyclability by design','10':'packaging minimisation'})[art];
+    foot.innerHTML = 'Showing <b>' + shown + '</b> product' + (shown === 1 ? '' : 's') +
+                     ' failing <b>Art. ' + art + '</b> — ' + name + ' · of 13 failing any PPWR requirement';
+  }
+}
+
+/* ── inline action feedback: the outcome replaces the button, in place ─── */
+function d3Handled(btn, label){
+  if(!btn || btn.dataset.done) return;
+  btn.dataset.done = '1';
+  var span = document.createElement('span');
+  span.className = 'd3-done';
+  span.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><use href="#gsi-19"/></svg>' + label;
+  btn.replaceWith(span);
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     ENTRANCE — four blocks, one short cascade. Deliberately plainer than
+     v02's: on a page whose job is to calm the reader down, the animation
+     should not be the loudest thing on it.
+     Same three safeguards as v02: reduced motion jumps to the end state,
+     a hidden tab plays on first reveal instead of freezing at opacity 0,
+     and a safety timer clears every inline hidden state regardless.
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+  var REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var EASE = 'cubic-bezier(.22,1,.36,1)';
+  var TOTAL = 1700;
+  var timers = [];
+
+  var blocks = Array.prototype.slice.call(document.querySelectorAll('#d3 .d3-anim'));
+  var sidebar = document.querySelector('#d3 .sidebar');
+  /* the headline count inside each donut: capture the authored value, count up to it */
+  var figs = Array.prototype.slice.call(document.querySelectorAll('#d3 .d3-fs-n')).map(function(el){
+    var node = el.childNodes[0];
+    if(!node || node.nodeType !== 3) return null;
+    var m = String(node.nodeValue).match(/^\s*(\d+)(.*)$/);
+    return m ? {node:node, target:parseInt(m[1],10), suffix:m[2] || ''} : null;
+  }).filter(Boolean);
+
+  /* donut slices: remember the authored stroke-dasharray so the draw can be
+     replayed and, more importantly, restored by the safety net */
+  var segs = Array.prototype.slice.call(document.querySelectorAll('#d3 .d3-pie-seg'));
+  segs.forEach(function(sg){ sg._da = sg.getAttribute('stroke-dasharray'); });
+
+  function finish(){
+    document.documentElement.classList.remove('gs-anim-armed');
+    blocks.forEach(function(b){ b.style.opacity = ''; b.style.transform = ''; });
+    if(sidebar){ sidebar.style.opacity = ''; sidebar.style.transform = ''; }
+    figs.forEach(function(f){ f.node.nodeValue = f.target + f.suffix; });
+    segs.forEach(function(sg){ if(sg._da) sg.setAttribute('stroke-dasharray', sg._da); });
+  }
+
+  if(REDUCE){ finish(); return; }
+  if(document.visibilityState === 'hidden'){
+    finish();
+    document.addEventListener('visibilitychange', function once(){
+      if(document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', once);
+      play();
+    });
+    return;
+  }
+  play();
+
+  function play(){
+    timers.forEach(clearTimeout); timers = [];
+
+    blocks.forEach(function(b){ b.style.opacity = '0'; });
+    if(sidebar){ sidebar.style.opacity = '0'; sidebar.style.transform = 'translateX(-40%)'; }
+    figs.forEach(function(f){ f.node.nodeValue = '0' + f.suffix; });
+    segs.forEach(function(sg){ sg.setAttribute('stroke-dasharray', '0 100'); });
+    document.documentElement.classList.remove('gs-anim-armed');
+
+    if(sidebar){
+      sidebar.animate([{opacity:0, transform:'translateX(-40%)'},{opacity:1, transform:'translateX(0)'}],
+        {duration:400, easing:EASE, fill:'both'})
+        .finished.then(function(){ sidebar.style.opacity=''; sidebar.style.transform=''; }).catch(function(){});
+    }
+    blocks.forEach(function(b,i){
+      b.animate([{opacity:0, transform:'translateY(14px)'},{opacity:1, transform:'translateY(0)'}],
+        {duration:400, delay:140 + i * 95, easing:EASE, fill:'both'})
+        .finished.then(function(){ b.style.opacity=''; b.style.transform=''; }).catch(function(){});
+    });
+
+    figs.forEach(function(f, i){
+      timers.push(setTimeout(function(){
+        var start = null;
+        requestAnimationFrame(function frame(ts){
+          if(start === null) start = ts;
+          var p = Math.min(1, (ts - start) / 460), e = 1 - Math.pow(1 - p, 3);
+          f.node.nodeValue = Math.round(f.target * e) + f.suffix;
+          if(p < 1) requestAnimationFrame(frame); else f.node.nodeValue = f.target + f.suffix;
+        });
+      }, 300 + i * 70));
+    });
+
+    /* each slice sweeps out to its authored share. Written straight to the
+       attribute rather than via WAAPI — stroke-dasharray interpolation is not
+       reliable across engines and this is three elements per card. */
+    segs.forEach(function(sg, i){
+      var auth = parseFloat((sg._da || '0 100').split(/\s+/)[0]) || 0;
+      timers.push(setTimeout(function(){
+        var start = null;
+        requestAnimationFrame(function frame(ts){
+          if(start === null) start = ts;
+          var p = Math.min(1, (ts - start) / 560), e = 1 - Math.pow(1 - p, 3), v = auth * e;
+          sg.setAttribute('stroke-dasharray', v.toFixed(2) + ' ' + (100 - v).toFixed(2));
+          if(p < 1) requestAnimationFrame(frame);
+          else sg.setAttribute('stroke-dasharray', sg._da);
+        });
+      }, 300 + i * 60));
+    });
+
+    /* safety net — a stalled animation may never leave the page blank */
+    timers.push(setTimeout(finish, TOTAL));
+  }
+
+  window.GSDash03Replay = play;
+})();
+</script>
+</body>
+</html>

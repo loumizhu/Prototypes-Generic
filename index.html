@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GreenStreets — Prototype Index</title>
+<link rel="icon" type="image/png" href="img/greenstreet-favicon.png">
+<meta name="theme-color" content="#0d2a1e">
+<meta name="description" content="GreenStreets — clickable UI/UX prototypes for the packaging-compliance platform.">
+<link rel="stylesheet" href="css/greenstreets-theme.css?v=40">
+<style>
+  body{
+    margin:0; min-height:100vh;
+    background:linear-gradient(135deg,#0b1f17,#0d2a1e 55%,#0a1712);
+    background-image:linear-gradient(135deg,rgba(11,31,23,.92),rgba(10,23,18,.92)),url('img/BackgroundGreenStreets.jpg');
+    background-size:cover; background-position:center; background-attachment:fixed;
+    color:#eaf5ee; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    padding:36px 20px 72px;
+  }
+  .idx-grid{
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:16px; width:100%; max-width:1200px;
+  }
+  @media (max-width:1024px){ .idx-grid{grid-template-columns:repeat(2,1fr); max-width:660px;} }
+  @media (max-width:560px){ .idx-grid{grid-template-columns:1fr; max-width:360px;} }
+  .idx-card{
+    position:relative; overflow:hidden;
+    display:flex; flex-direction:column;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(143,227,182,.18);
+    border-radius:18px; padding:26px 26px 24px;
+    backdrop-filter:blur(14px) saturate(1.2);
+    -webkit-backdrop-filter:blur(14px) saturate(1.2);
+    box-shadow:0 12px 40px rgba(0,0,0,.28);
+    text-decoration:none; color:inherit;
+    transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease;
+  }
+  /* slow diagonal shine sweep */
+  .idx-card::after{
+    content:''; position:absolute; top:-60%; left:-75%;
+    width:50%; height:220%; pointer-events:none;
+    background:linear-gradient(105deg,
+      transparent 0%,
+      rgba(255,255,255,.06) 40%,
+      rgba(255,255,255,.28) 50%,
+      rgba(255,255,255,.06) 60%,
+      transparent 100%);
+    transform:rotate(8deg);
+    animation:idxShine 7s ease-in-out infinite;
+  }
+  @keyframes idxShine{
+    0%   {left:-75%; opacity:0;}
+    12%  {opacity:1;}
+    38%  {left:135%; opacity:0;}
+    100% {left:135%; opacity:0;}
+  }
+  /* stagger each card so the sweep ripples across them */
+  .idx-grid .idx-card:nth-child(1)::after{animation-delay:0s;}
+  .idx-grid .idx-card:nth-child(2)::after{animation-delay:.6s;}
+  .idx-grid .idx-card:nth-child(3)::after{animation-delay:1.2s;}
+  .idx-grid .idx-card:nth-child(4)::after{animation-delay:1.8s;}
+  @media (prefers-reduced-motion:reduce){
+    .idx-card::after{animation:none; opacity:0;}
+  }
+  .idx-card:hover{
+    transform:translateY(-5px);
+    border-color:rgba(143,227,182,.5);
+    background:rgba(255,255,255,.09);
+    box-shadow:0 20px 54px rgba(0,0,0,.4), 0 0 0 1px rgba(143,227,182,.25);
+  }
+  .idx-tag{
+    align-self:flex-start; font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    font-weight:600; padding:4px 11px; border-radius:999px; margin-bottom:16px;
+    background:rgba(143,227,182,.16); color:#a9edc6; border:1px solid rgba(143,227,182,.3);
+  }
+  .idx-tag.admin{background:rgba(126,178,255,.16); color:#aecbff; border-color:rgba(126,178,255,.3);}
+  .idx-tag.wip{background:rgba(255,196,120,.16); color:#ffcf8f; border-color:rgba(255,196,120,.32);}
+  .idx-card h2{font-size:20px; font-weight:650; margin:0 0 8px; letter-spacing:-.2px;}
+  .idx-card p{font-size:13.5px; line-height:1.6; color:rgba(234,245,238,.72); margin:0 0 20px; flex:1;}
+  .idx-open{
+    display:inline-flex; align-items:center; gap:8px; align-self:flex-start;
+    font-size:13px; font-weight:600; color:#8fe3b6;
+  }
+  .idx-open svg{transition:transform .22s ease;}
+  .idx-card:hover .idx-open svg{transform:translateX(4px);}
+  /* error-page mini section */
+  .idx-sub-h{width:100%; max-width:1080px; margin:40px 0 14px; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:rgba(234,245,238,.45); font-weight:600;}
+  .idx-mini-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; width:100%; max-width:1080px;}
+  .idx-mini{
+    display:flex; align-items:center; gap:14px; text-decoration:none; color:inherit;
+    background:rgba(255,255,255,.05); border:1px solid rgba(143,227,182,.14);
+    border-radius:14px; padding:16px 18px;
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    transition:transform .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .idx-mini:hover{transform:translateY(-3px); border-color:rgba(143,227,182,.4); background:rgba(255,255,255,.08);}
+  .idx-mini-code{
+    flex-shrink:0; width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    font-size:17px; font-weight:700; letter-spacing:-.5px;
+    background:rgba(255,150,120,.14); color:#ffb59b; border:1px solid rgba(255,150,120,.3);
+  }
+  .idx-mini-code.warn{background:rgba(255,196,120,.14); color:#ffcf8f; border-color:rgba(255,196,120,.3);}
+  .idx-mini h3{font-size:14px; font-weight:650; margin:0 0 3px;}
+  .idx-mini p{font-size:12px; line-height:1.5; color:rgba(234,245,238,.6); margin:0;}
+  .idx-foot{margin-top:48px; font-size:12px; color:rgba(234,245,238,.45); text-align:center; line-height:1.9;}
+  .idx-foot a{color:#8fe3b6; text-decoration:none; font-weight:600;}
+  .idx-foot a:hover{text-decoration:underline;}
+  .idx-foot-links{display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin-bottom:14px;}
+  .idx-foot-links a{display:inline-flex; align-items:center; gap:7px; padding:8px 15px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid rgba(143,227,182,.2); font-size:12.5px; transition:border-color .2s, background .2s;}
+  .idx-foot-links a:hover{text-decoration:none; border-color:rgba(143,227,182,.5); background:rgba(255,255,255,.09);}
+  .idx-sig{margin-top:16px; font-size:12px; color:rgba(234,245,238,.55);}
+  .idx-sig b{color:#eaf5ee; font-weight:600;}
+  .idx-foot-mark{width:132px; opacity:.6; margin:0 auto 16px; display:block;
+    filter:drop-shadow(0 0 14px rgba(78,187,129,.3)); transition:opacity .25s ease;}
+  .idx-foot-mark:hover{opacity:.9;}
+  /* ══════════════ BRAND HERO — WebGL plasma reactor ══════════════
+     Every visual knob below is a CSS custom property so the FX panel
+     (bottom-right) can drive it live; the defaults here are the shipped look. */
+  :root{
+    --idx-logo-size:280px;      /* the mark itself */
+    --idx-canvas-size:384px;    /* reactor canvas, overflows the mark */
+    --idx-glow:1;               /* logo bloom multiplier */
+    --idx-bed:.095;              /* radial pool of light behind it */
+    --idx-flow-dur:7.4s;        /* energy sweeping through the glyphs */
+    --idx-flow-op:.85;
+    --idx-heat-dur:22s;         /* slow conic heat inside the glyphs */
+    --idx-heat-op:.55;
+    --idx-float-dur:12s;        /* idle bob */
+    --idx-float-amt:6px;
+    --idx-breathe-dur:11s;      /* the light pool breathing */
+  }
+  .idx-hero{
+    position:relative; width:100%; max-width:1200px;
+    display:flex; flex-direction:column; align-items:center;
+    padding-top:40px; margin:0 0 28px;
+    isolation:isolate;
+  }
+  /* the reactor frame holds the logo; the canvas overflows it symmetrically
+     so the corona never crowds the copy underneath */
+  .idx-reactor{
+    position:relative; width:var(--idx-logo-size); max-width:78vw;
+    aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+    margin-bottom:26px;
+  }
+  #idxPlasma{
+    position:absolute; top:50%; left:50%;
+    width:var(--idx-canvas-size); height:var(--idx-canvas-size);
+    max-width:96vw; max-height:96vw;
+    transform:translate(-50%,-50%);
+    z-index:0; pointer-events:none;
+    opacity:0; transition:opacity 1.2s ease;
+  }
+  #idxPlasma.ready{opacity:1;}
+  /* soft radial bed so the reactor sits in a pool of light */
+  .idx-reactor::before{
+    content:''; position:absolute; top:50%; left:50%;
+    width:calc(var(--idx-canvas-size) * 1.08);
+    height:calc(var(--idx-canvas-size) * 1.08);
+    max-width:100vw; max-height:100vw;
+    transform:translate(-50%,-50%);
+    background:radial-gradient(circle at 50% 50%,
+      rgba(78,187,129,var(--idx-bed)) 0%,
+      rgba(78,187,129,calc(var(--idx-bed) * .44)) 34%,
+      rgba(11,31,23,0) 70%);
+    z-index:0; pointer-events:none;
+    animation:idxBreathe var(--idx-breathe-dur) ease-in-out infinite;
+  }
+  @keyframes idxBreathe{
+    0%,100%{transform:translate(-50%,-50%) scale(1);    opacity:.85;}
+    50%    {transform:translate(-50%,-50%) scale(1.07); opacity:1;}
+  }
+
+  .idx-hero-core{
+    position:relative; z-index:1; text-align:center;
+    max-width:760px; padding:0 16px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+
+  /* ── the logo itself ── */
+  .idx-mark{
+    position:relative; z-index:1; width:100%;
+    aspect-ratio:350/250;
+    animation:idxMarkIn 1.8s cubic-bezier(.16,1,.3,1) both,
+              idxMarkFloat var(--idx-float-dur) ease-in-out 1.8s infinite;
+  }
+  @keyframes idxMarkIn{
+    0%  {opacity:0; transform:scale(.82); filter:blur(14px) brightness(2.4);}
+    55% {opacity:1;}
+    100%{opacity:1; transform:scale(1);   filter:blur(0)   brightness(1);}
+  }
+  @keyframes idxMarkFloat{
+    0%,100%{translate:0 0;}
+    50%    {translate:0 calc(-1 * var(--idx-float-amt));}
+  }
+  .idx-mark img{
+    display:block; width:100%; height:100%; object-fit:contain;
+    animation:idxMarkPulse calc(var(--idx-float-dur) * .6) ease-in-out infinite;
+  }
+  @keyframes idxMarkPulse{
+    0%,100%{filter:drop-shadow(0 0 calc(14px * var(--idx-glow)) rgba(78,187,129,calc(.45 * var(--idx-glow))))
+                   drop-shadow(0 0 calc(40px * var(--idx-glow)) rgba(143,227,182,calc(.22 * var(--idx-glow))));}
+    50%    {filter:drop-shadow(0 0 calc(24px * var(--idx-glow)) rgba(120,240,190,calc(.75 * var(--idx-glow))))
+                   drop-shadow(0 0 calc(62px * var(--idx-glow)) rgba(143,227,182,calc(.40 * var(--idx-glow))));}
+  }
+  /* plasma flowing THROUGH the logo silhouette (CSS mask — no texture upload,
+     so it works over file:// where a WebGL texture from a local PNG is blocked) */
+  .idx-mark-fx{
+    position:absolute; inset:0; pointer-events:none;
+    -webkit-mask:url('img/Logo-WG.png') center/contain no-repeat;
+            mask:url('img/Logo-WG.png') center/contain no-repeat;
+    mix-blend-mode:screen;
+  }
+  .idx-mark-fx.flow{
+    background:linear-gradient(115deg,
+      rgba(78,187,129,0)   28%,
+      rgba(143,227,182,.75) 42%,
+      rgba(226,255,240,1)   50%,
+      rgba(120,240,190,.8)  58%,
+      rgba(78,187,129,0)    72%);
+    background-size:300% 300%;
+    opacity:var(--idx-flow-op);
+    animation:idxFlow var(--idx-flow-dur) cubic-bezier(.55,0,.45,1) infinite;
+  }
+  @keyframes idxFlow{
+    0%  {background-position:130% 0%;}
+    60% {background-position:-40% 100%;}
+    100%{background-position:-40% 100%;}
+  }
+  /* The mask must stay put while the gradient turns — rotating the masked
+     element itself rotates the logo silhouette too and stamps ghost copies
+     of the wordmark, so the spin lives on an inner child. */
+  .idx-mark-fx.heat{overflow:hidden; opacity:var(--idx-heat-op);}
+  .idx-mark-fx.heat i{
+    position:absolute; top:50%; left:50%; width:160%; aspect-ratio:1/1;
+    transform-origin:50% 50%;
+    background:conic-gradient(from 0deg,
+      rgba(78,187,129,0), rgba(143,227,182,.55), rgba(90,220,255,.28),
+      rgba(143,227,182,.55), rgba(78,187,129,0));
+    animation:idxHeat var(--idx-heat-dur) linear infinite;
+  }
+  @keyframes idxHeat{
+    from{transform:translate(-50%,-50%) rotate(0deg);}
+    to  {transform:translate(-50%,-50%) rotate(360deg);}
+  }
+  /* paused from the FX panel */
+  body.idx-fx-paused .idx-mark,
+  body.idx-fx-paused .idx-mark img,
+  body.idx-fx-paused .idx-mark-fx.flow,
+  body.idx-fx-paused .idx-mark-fx.heat i,
+  body.idx-fx-paused .idx-reactor::before{animation-play-state:paused;}
+
+  .idx-hero-core h1{
+    font-size:clamp(30px,5vw,46px); font-weight:700; margin:0 0 12px;
+    letter-spacing:-.8px; line-height:1.1;
+    background:linear-gradient(180deg,#ffffff 25%,#b9f0d2 115%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .idx-hero-core p{
+    font-size:15px; line-height:1.65; color:rgba(234,245,238,.72);
+    margin:0 auto; max-width:640px;
+  }
+  .idx-build{
+    display:inline-flex; align-items:center; gap:7px; margin-top:18px;
+    padding:6px 14px; border-radius:999px; font-size:12px; font-weight:600;
+    letter-spacing:.04em; color:#a9edc6;
+    background:rgba(143,227,182,.12); border:1px solid rgba(143,227,182,.28);
+  }
+  .idx-build i{
+    width:6px; height:6px; border-radius:50%; background:#8fe3b6;
+    box-shadow:0 0 0 0 rgba(143,227,182,.7); animation:idxBlip 2.4s ease-out infinite;
+  }
+  @keyframes idxBlip{
+    0%  {box-shadow:0 0 0 0 rgba(143,227,182,.7);}
+    70% {box-shadow:0 0 0 9px rgba(143,227,182,0);}
+    100%{box-shadow:0 0 0 0 rgba(143,227,182,0);}
+  }
+  @media (max-width:640px){
+    .idx-hero{padding-top:24px;}
+  }
+
+  /* ══════════════ FX control panel (reviewer aid, not product UI) ══════════════
+     Same widget idiom as GreenStreets_Super_Admin/login-logo-warp.html */
+  #fxpanel{position:fixed;top:14px;right:14px;width:332px;max-height:calc(100vh - 28px);
+    display:none;flex-direction:column;z-index:9998;
+    background:rgba(14,26,22,.88);backdrop-filter:blur(18px) saturate(1.3);
+    -webkit-backdrop-filter:blur(18px) saturate(1.3);
+    border:1px solid rgba(255,255,255,.12);border-radius:14px;
+    box-shadow:0 24px 60px rgba(0,0,0,.55);color:#eaf5ef;
+    font:400 12px/1.4 Inter,system-ui,sans-serif}
+  #fxpanel.open{display:flex}
+  .wp-head{display:flex;align-items:center;gap:8px;padding:10px 12px;
+    border-bottom:1px solid rgba(255,255,255,.09);flex:0 0 auto}
+  .wp-head b{font-size:12px;font-weight:600;letter-spacing:.2px;flex:1}
+  .wp-head .wp-fps{font-size:10px;opacity:.5;font-variant-numeric:tabular-nums}
+  .wp-x{background:none;border:1px solid rgba(255,255,255,.18);color:inherit;border-radius:6px;
+    width:22px;height:22px;line-height:1;cursor:pointer;font-size:13px;padding:0}
+  .wp-x:hover{background:rgba(255,255,255,.1)}
+  .wp-body{overflow:auto;padding:4px 0 10px;flex:1 1 auto;scrollbar-width:thin}
+  .wp-body::-webkit-scrollbar{width:8px}
+  .wp-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:8px}
+  .wp-grp{border-bottom:1px solid rgba(255,255,255,.06)}
+  .wp-grp>summary{list-style:none;cursor:pointer;padding:8px 12px;font-weight:600;font-size:11px;
+    letter-spacing:.6px;text-transform:uppercase;color:#8fe3b6;display:flex;align-items:center;gap:6px}
+  .wp-grp>summary::-webkit-details-marker{display:none}
+  .wp-grp>summary::before{content:'\25B8';font-size:9px;opacity:.7;transition:transform .15s}
+  .wp-grp[open]>summary::before{transform:rotate(90deg)}
+  .wp-grp-in{padding:2px 12px 10px}
+  .wp-row{display:grid;grid-template-columns:1fr 54px;gap:2px 8px;align-items:center;margin:7px 0}
+  .wp-row label{grid-column:1;font-size:11px;opacity:.85}
+  .wp-row .wp-val{grid-column:2;text-align:right;font-size:10px;opacity:.6;font-variant-numeric:tabular-nums}
+  .wp-row input[type=range]{grid-column:1/3;width:100%;height:16px;margin:0;
+    -webkit-appearance:none;appearance:none;background:transparent}
+  .wp-row input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:3px;
+    background:rgba(255,255,255,.16)}
+  .wp-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;
+    margin-top:-4.5px;border-radius:50%;background:#8fe3b6;border:none;cursor:pointer;
+    box-shadow:0 0 0 3px rgba(143,227,182,.16)}
+  .wp-crow{display:flex;align-items:center;justify-content:space-between;margin:7px 0;font-size:11px}
+  .wp-crow input[type=color]{width:34px;height:20px;padding:0;border:1px solid rgba(255,255,255,.2);
+    border-radius:5px;background:none;cursor:pointer}
+  .wp-crow input[type=checkbox]{width:15px;height:15px;accent-color:#8fe3b6;cursor:pointer;margin:0}
+  .wp-btns{display:flex;flex-wrap:wrap;gap:5px;padding:10px 12px 2px}
+  .wp-btn{flex:1 1 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);
+    color:#eaf5ef;border-radius:7px;padding:6px 8px;font:600 10.5px Inter,sans-serif;cursor:pointer;
+    letter-spacing:.3px}
+  .wp-btn:hover{background:rgba(143,227,182,.18);border-color:rgba(143,227,182,.4)}
+  .wp-btn.pri{background:rgba(143,227,182,.2);border-color:rgba(143,227,182,.45);color:#d7ffe9}
+  .wp-note{padding:8px 12px 0;font-size:10px;opacity:.5;line-height:1.55}
+  #fxToggle{position:fixed;bottom:16px;right:16px;z-index:9997;
+    background:rgba(14,26,22,.8);backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(143,227,182,.3);color:#a9edc6;border-radius:10px;
+    padding:8px 13px;font:600 11.5px Inter,system-ui,sans-serif;cursor:pointer;
+    box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  #fxToggle:hover{background:rgba(143,227,182,.2);border-color:#8fe3b6}
+</style>
+</head>
+<body>
+  <!-- ══════════ BRAND HERO — WebGL plasma reactor behind the logo ══════════ -->
+  <div class="idx-hero">
+    <div class="idx-reactor">
+      <canvas id="idxPlasma" aria-hidden="true"></canvas>
+      <div class="idx-mark">
+        <img src="img/Logo-WG.png" alt="Greenstreets — Global EPR Compliance Specialists">
+        <span class="idx-mark-fx heat" aria-hidden="true"><i></i></span>
+        <span class="idx-mark-fx flow" aria-hidden="true"></span>
+      </div>
+    </div>
+    <div class="idx-hero-core">
+      <h1>Prototype Index</h1>
+      <p>Clickable UI/UX prototypes for the GreenStreets packaging-compliance platform. Pick a portal below to open it.</p>
+      <span class="idx-build"><i></i>Build 64</span>
+    </div>
+  </div>
+
+  <div class="idx-grid">
+
+    <a class="idx-card" href="GreenStreets_Super_Admin/01-greenstreets_super_admin_Login.html">
+      <span class="idx-tag admin">Platform Admin · v7</span>
+      <h2>GreenStreets Super Admin</h2>
+      <p>The platform-operator console (Greenstreets staff) — split into one page per screen with the glassmorphism design system, live theme customizer, and the full data-grid toolkit on its listings. Opens at the login screen; see the folder's <code>index.html</code> for all 20 screens.</p>
+      <span class="idx-open">Open portal
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+
+    <a class="idx-card" href="Retailer_Admin_Portal/02-Greenstreets_retailer_admin_Login.html">
+      <span class="idx-tag">Retailer Admin</span>
+      <h2>Retailer Admin Portal</h2>
+      <p>Retailer-side administrator experience — supplier onboarding, compliance tracking, EPR reports, DoC generation and audit logs. Opens at the login screen.</p>
+      <span class="idx-open">Open portal
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+
+    <a class="idx-card" href="Retailer_User_Portal/03-greenstreets_retailer_user_Login.html">
+      <span class="idx-tag">Retailer User</span>
+      <h2>Retailer User Portal</h2>
+      <p>Day-to-day retailer user view — browse products, suppliers and packaging, request Declarations of Conformity, and manage documents. Opens at the login screen.</p>
+      <span class="idx-open">Open portal
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+
+    <a class="idx-card" href="Supplier_Portal/04-greenstreets_supplier_portal_Login.html">
+      <span class="idx-tag">Supplier</span>
+      <h2>Supplier Portal</h2>
+      <p>The supplier-facing experience — AI-assisted packaging upload &amp; review, the component wizard, and per-packaging detail screens. Opens at the login screen.</p>
+      <span class="idx-open">Open portal
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+
+  </div>
+
+ 
+
+  <div class="idx-sub-h">Variations</div>
+  <div class="idx-mini-grid">
+    <a class="idx-mini" href="GreenStreets_Super_Admin/01-greenstreets_super_admin_Login-Light.html">
+      <span class="idx-mini-code" style="background:rgba(126,178,255,.14);color:#aecbff;border-color:rgba(126,178,255,.3)">☀</span>
+      <div><h3>Super Admin — Light theme</h3><p>Pastel light variant of the whole Super Admin portal — opens at the login screen; every screen has a light twin.</p></div>
+    </a>
+    <a class="idx-mini" href="Retailer_Admin_Portal/02-Greenstreets_retailer_admin_Login-Light.html">
+      <span class="idx-mini-code" style="background:rgba(126,178,255,.14);color:#aecbff;border-color:rgba(126,178,255,.3)">☀</span>
+      <div><h3>Retailer Admin — Light theme</h3><p>Pastel light variant of the whole Retailer Admin portal — opens at the login screen; every screen has a light twin.</p></div>
+    </a>
+    <a class="idx-mini" href="Retailer_User_Portal/03-greenstreets_retailer_user_Login-Light.html">
+      <span class="idx-mini-code" style="background:rgba(126,178,255,.14);color:#aecbff;border-color:rgba(126,178,255,.3)">☀</span>
+      <div><h3>Retailer User — Light theme</h3><p>Pastel light variant of the whole Retailer User portal — opens at the login screen; every screen has a light twin.</p></div>
+    </a>
+    <a class="idx-mini" href="Supplier_Portal/04-greenstreets_supplier_portal_Login-Light.html">
+      <span class="idx-mini-code" style="background:rgba(126,178,255,.14);color:#aecbff;border-color:rgba(126,178,255,.3)">☀</span>
+      <div><h3>Supplier Portal — Light theme</h3><p>Pastel light variant of the whole Supplier Portal — opens at the login screen; every screen has a light twin.</p></div>
+    </a>
+  </div>
+
+  <div class="idx-sub-h">Error pages</div>
+  <div class="idx-mini-grid">
+    <a class="idx-mini" href="error-400.html">
+      <span class="idx-mini-code">400</span>
+      <div><h3>Bad Request</h3><p>Client-error page — malformed or invalid request.</p></div>
+    </a>
+    <a class="idx-mini" href="error-500.html">
+      <span class="idx-mini-code warn">500</span>
+      <div><h3>Server Error</h3><p>Server-error page — something went wrong on our end.</p></div>
+    </a>
+  </div>
+
+  <div class="idx-foot">
+    <div class="idx-foot-links">
+      <a href="https://github.com/loumizhu/GreenStreets_Prototypes/" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.55-1.14-4.55-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.4 9.4 0 0 1 2.5-.34c.85 0 1.71.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.59.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"/></svg>
+        GitHub repository
+      </a>
+      <a href="https://drive.google.com/open?id=1n32lb_0SoUpciwM2_ej9iRjDfBC84VGI&usp=drive_fs" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5 1.15 15l3.43 5.5 6.56-11.5-3.43-5.5zm8.58 0H9.43l6.56 11.5h6.86L16.29 3.5zM8.29 16 4.86 21.5h13.71L22 16H8.29z"/></svg>
+        Google Drive
+      </a>
+      <a href="https://www.figma.com/design/TsfEe7EDklBcpK6mqqkemh/GreenStreets?node-id=33-449&t=BLUDPJBy526eEK1m-4" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 6a2 2 0 0 1 2-2h2v4h-2a2 2 0 0 1-2-2zm4-2h2a2 2 0 1 1 0 4h-2V4zM8 12a2 2 0 0 1 2-2h2v4h-2a2 2 0 0 1-2-2zm8 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 0 1 2-2h2v2a2 2 0 1 1-4 0z"/></svg>
+        Figma — Page component
+      </a>
+    </div>
+
+
+    <img class="idx-foot-mark" src="img/Logo-WG.png" alt="">
+    <div>GreenStreets · DuneTech — internal prototype gallery</div>
+    <div class="idx-sig">Designed by <b>Zou</b> · UI/UX Designer · <a href="mailto:Zou.gharbi@gmail.com">Zou.gharbi@gmail.com</a></div>
+  </div>
+<!-- ══════════ Plasma reactor (WebGL) + live FX controls ══════════
+     Procedural only — nothing is uploaded as a texture, because a page opened
+     from file:// treats every local image as its own origin and texImage2D on
+     one throws a security error. The logo stays a real <img> on top, with its
+     energy flow done as a CSS mask (CSS images don't taint anything).
+
+     Every knob lives in P and is either a shader uniform or a CSS custom
+     property, so the panel (bottom-right) retunes the whole hero live.
+     "Copy params" puts the JSON on the clipboard so the values can be
+     baked back in as the new defaults. -->
+<script>
+(function(){
+  var cv = document.getElementById('idxPlasma');
+  if(!cv) return;
+
+  /* ═══════════ parameter spec — drives the panel AND the defaults ═══════════
+     [key, label, min, max, step, default]  */
+  var SPEC = [
+    {g:'Layout', open:true, p:[
+      ['logoSize',   'Logo size (px)',        90,  480, 2,   280],
+      ['canvasSize', 'Reactor canvas (px)',  180, 1000, 4,   384],
+      ['bed',        'Light pool',             0,  .45, .005, .095]
+    ]},
+    {g:'Speed', open:true, p:[
+      ['speed',      'Master speed',          0,   2.5, .01,  .22],
+      ['coreSpin',   'Core vortex spin',      0,   2.5, .01,  2.50],
+      ['arcSpeed',   'Ring arc speed',        0,   4,   .01, .23],
+      ['boltSpeed',  'Discharge speed',       0,   4,   .01, 2.11],
+      ['filSpeed',   'Filament drift',        0,   3,   .01,  .25]
+    ]},
+    {g:'Corona geometry', open:true, p:[
+      ['ringR',      'Main ring radius',     .35,  1.2, .005, .665],
+      ['ringW',      'Ring thickness',       .08,  3,   .01,  .08],
+      ['ringGap',    'Ring spacing',          .2,  2.5, .01, 1.00],
+      ['holeIn',     'Quiet zone start',       0,   .9, .005, .635],
+      ['holeOut',    'Quiet zone end',        .1,  1.2, .005, .565]
+    ]},
+    {g:'Filaments & arcs', open:false, p:[
+      ['filCount',   'Filament count',         2,   40, 1,     10],
+      ['filSharp',   'Filament thinness',      4,  120, 1,     44],
+      ['arcFreq',    'Ring arc segments',      1,   30, 1,      9],
+      ['boltW',      'Discharge spread',     .02,  .5, .005,  .12]
+    ]},
+    {g:'Intensity', open:false, p:[
+      ['gain',       'Overall brightness',     0,    3, .01, 1.00],
+      ['coreI',      'Core',                   0,    2, .01,  .55],
+      ['ringI',      'Rings',                  0,    2, .01,  .80],
+      ['filI',       'Filaments',              0,    2, .01,  .45],
+      ['boltI',      'Discharges',             0,    2, .01,  .28],
+      ['plasmaI',    'Plasma haze',            0,    2, .01,  .45],
+      ['rimI',       'Cool rim',               0,    1, .01,  .22],
+      ['warp',       'Plasma warp',            0,  1.5, .01,  .55],
+      ['scale',      'Plasma scale',          .4,    5, .01, 1.90]
+    ]},
+    {g:'Logo treatment', open:false, p:[
+      ['glow',       'Logo bloom',             0,    3, .01, 1.00],
+      ['flowDur',    'Energy sweep (s)',       1,   20, .1,  7.40],
+      ['flowOp',     'Energy sweep opacity',   0,    1, .01,  .85],
+      ['heatDur',    'Inner heat spin (s)',    2,   60, .5, 22.00],
+      ['heatOp',     'Inner heat opacity',     0,    1, .01,  .55],
+      ['floatDur',   'Idle bob (s)',           2,   30, .5, 12.00],
+      ['floatAmt',   'Idle bob distance (px)', 0,   24, .5,  6.00],
+      ['breatheDur', 'Light pool breathe (s)', 2,   30, .5, 11.00]
+    ]},
+    {g:'Parallax', open:false, p:[
+      ['parallax',   'Pointer parallax',       0,  .25, .005, .25]
+    ]}
+  ];
+  var COLORS = [
+    ['colA', 'Plasma base',  '#4ebb81'],
+    ['colB', 'Plasma mid',   '#8fe3b6'],
+    ['colC', 'Hot core',     '#d9ffef'],
+    ['colR', 'Cool rim',     '#4dd1f2']
+  ];
+  var TOGGLES = [
+    ['paused', 'Pause animation', false]
+  ];
+
+  var PRESETS = {
+    'Shipped':  {},                                       /* = defaults */
+    'Whisper':  {speed:.18,ringW:.08,gain:.62,filI:.28,boltI:.16,coreI:.38,glow:.75,plasmaI:.3},
+    'Hairline': {ringW:.08,ringGap:1.35,filSharp:90,filCount:16,gain:1.05,coreI:.4,plasmaI:.3},
+    'Reactor':  {speed:.85,ringW:.7,gain:1.35,coreI:.9,filI:.7,boltI:.55,arcSpeed:2.2,plasmaI:.7,holeIn:.26,holeOut:.68},
+    'Overdrive':{speed:1.5,ringW:1.1,gain:2,coreI:1.4,filI:1.1,boltI:.9,arcSpeed:3.2,boltSpeed:2.6,plasmaI:1.1,glow:1.8,holeIn:.26,holeOut:.68}
+  };
+
+  /* ── state ── */
+  var P = {};
+  SPEC.forEach(function(g){ g.p.forEach(function(r){ P[r[0]] = r[5]; }); });
+  COLORS.forEach(function(c){ P[c[0]] = c[2]; });
+  TOGGLES.forEach(function(t){ P[t[0]] = t[2]; });
+  var DEFAULTS = JSON.parse(JSON.stringify(P));
+
+  var LS = 'gs-index-hero-fx-v2';
+  try{ var saved = JSON.parse(localStorage.getItem(LS)||'null');
+       if(saved) Object.keys(saved).forEach(function(k){ if(k in P) P[k]=saved[k]; }); }catch(e){}
+  function save(){ try{ localStorage.setItem(LS, JSON.stringify(P)); }catch(e){} }
+
+  function hex2rgb(h){
+    h = String(h).replace('#','');
+    if(h.length===3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var n = parseInt(h,16);
+    return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255];
+  }
+
+  /* ═══════════════════════ WebGL ═══════════════════════ */
+  var gl = cv.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:false,depth:false})
+        || cv.getContext('experimental-webgl',{alpha:true,premultipliedAlpha:false});
+
+  var VS = [
+    'attribute vec2 p;',
+    'void main(){ gl_Position = vec4(p,0.0,1.0); }'
+  ].join('\n');
+
+  var FS = [
+    'precision highp float;',
+    'uniform vec2  uRes;',
+    'uniform float uT;',
+    'uniform vec2  uPtr;',
+    'uniform float uCharge;',
+    'uniform float uRingR,uRingW,uRingGap,uArcFreq,uArcSpeed;',
+    'uniform float uHoleIn,uHoleOut;',
+    'uniform float uFilCount,uFilSharp,uFilSpeed;',
+    'uniform float uBoltW,uBoltSpeed;',
+    'uniform float uCoreSpin,uWarp,uScale;',
+    'uniform float uGain,uCoreI,uRingI,uFilI,uBoltI,uPlasmaI,uRimI;',
+    'uniform vec3  uColA,uColB,uColC,uColR;',
+
+    'float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }',
+    'float noise(vec2 p){',
+    '  vec2 i=floor(p), f=fract(p);',
+    '  vec2 u=f*f*(3.0-2.0*f);',
+    '  return mix(mix(hash(i),              hash(i+vec2(1.0,0.0)),u.x),',
+    '             mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),u.x),u.y);',
+    '}',
+    'float fbm(vec2 p){',
+    '  float v=0.0, a=0.5;',
+    '  mat2 m=mat2(1.6,1.2,-1.2,1.6);',
+    '  for(int i=0;i<5;i++){ v+=a*noise(p); p=m*p; a*=0.5; }',
+    '  return v;',
+    '}',
+    'float ring(float r,float R,float w){ float d=(r-R)/max(w,0.0006); return exp(-d*d); }',
+
+    'void main(){',
+    '  vec2 uv = (gl_FragCoord.xy - 0.5*uRes) / min(uRes.x,uRes.y) * 2.0;',
+    '  uv -= uPtr;',
+    '  float r = length(uv);',
+    '  float a = atan(uv.y, uv.x);',
+    '  float t = uT;',
+
+    /* domain-warped plasma body */
+    '  vec2 q = uv*1.5;',
+    '  q += uWarp*vec2(fbm(q*1.3 + vec2(0.0,  t*0.25)),',
+    '                  fbm(q*1.3 + vec2(5.2, -t*0.21)));',
+    '  float plasma = pow(fbm(q*uScale + vec2(t*0.12,-t*0.09)), 1.6);',
+
+    /* vortex — sample angle bent by radius so the core visibly spins */
+    '  float sw = a + 1.7/(r+0.35) - t*uCoreSpin;',
+    '  float vortex = fbm(vec2(cos(sw),sin(sw))*2.2 + r*2.4 - t*0.4);',
+    '  float core = exp(-r*2.7) * (0.55 + 0.85*vortex);',
+
+    /* Quiet zone. The logo sits in the middle of this canvas, so the plasma is
+       held back inside the hole and the drama happens as a corona just outside
+       it — otherwise the core blows out the wordmark and the tagline goes
+       unreadable. */
+    '  float hole = smoothstep(uHoleIn, max(uHoleOut,uHoleIn+0.01), r);',
+    '  core   *= hole;',
+    '  plasma *= hole;',
+
+    /* containment rings — the reactor housing. uRingW scales all four so the
+       corona thins or thickens as one. */
+    '  float rings = 0.0;',
+    '  rings += ring(r, uRingR,                 0.066*uRingW) * (0.50 + 0.50*sin(a*3.0 - t*uArcSpeed));',
+    '  rings += ring(r, uRingR+0.12*uRingGap,   0.029*uRingW) * (0.30 + 0.70*pow(max(sin( a*uArcFreq      + t*uArcSpeed*1.40),0.0), 6.0));',
+    '  rings += ring(r, uRingR+0.25*uRingGap,   0.040*uRingW) * (0.28 + 0.72*pow(max(sin(-a*uArcFreq*1.55 + t*uArcSpeed*0.73),0.0),10.0));',
+    '  rings += ring(r, uRingR-0.09*uRingGap,   0.016*uRingW) * 0.80;',
+
+    /* radial filaments streaming out of the corona */
+    '  float fil = pow(max(sin(a*uFilCount + vortex*6.0 + t*uFilSpeed),0.0), uFilSharp);',
+    '  fil *= smoothstep(1.40,0.50,r) * hole;',
+
+    /* arc discharges hugging the main ring */
+    '  float bolt = pow(max(1.0 - abs(fbm(vec2(a*2.4, r*3.0 - t*uBoltSpeed))*2.0 - 1.0), 0.0), 9.0);',
+    '  bolt *= ring(r, uRingR+0.06, uBoltW);',
+
+    '  float e = core*uCoreI + rings*uRingI + fil*uFilI + bolt*uBoltI',
+    '          + plasma*exp(-r*1.7)*uPlasmaI;',
+    '  e *= uCharge * uGain;',
+
+    /* GreenStreets ramp: deep forest -> base -> mid -> hot */
+    '  vec3 col  = vec3(0.016,0.094,0.063) * smoothstep(1.7,0.0,r) * 0.9;',
+    '  col += uColA * e * 0.85;',
+    '  col += uColB * pow(e,1.9) * 0.80;',
+    '  col += uColC * pow(e,4.0) * 0.90;',
+    '  col += uColR * pow(rings*uRingI,3.0) * uRimI;',
+
+    '  float alpha = clamp(e*0.95 + exp(-r*2.4)*0.12*hole, 0.0, 1.0);',
+    '  alpha *= smoothstep(1.70,0.55,r);',
+    '  gl_FragColor = vec4(col, alpha);',
+    '}'
+  ].join('\n');
+
+  var glOK = !!gl, U = {}, pr;
+  if(glOK){
+    var sh = function(type,src){
+      var s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+      if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
+        console.warn('[idxPlasma]',gl.getShaderInfoLog(s)); return null;
+      }
+      return s;
+    };
+    var vs=sh(gl.VERTEX_SHADER,VS), fs=sh(gl.FRAGMENT_SHADER,FS);
+    if(!vs||!fs){ glOK=false; }
+    else{
+      pr=gl.createProgram();
+      gl.attachShader(pr,vs); gl.attachShader(pr,fs); gl.linkProgram(pr);
+      if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){ glOK=false; }
+    }
+  }
+  if(!glOK){
+    cv.style.display='none';           /* logo + CSS glow still carry the brand */
+  }else{
+    gl.useProgram(pr);
+    var buf=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 3,-1, -1,3]),gl.STATIC_DRAW);
+    var loc=gl.getAttribLocation(pr,'p');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+    ['uRes','uT','uPtr','uCharge','uRingR','uRingW','uRingGap','uArcFreq','uArcSpeed',
+     'uHoleIn','uHoleOut','uFilCount','uFilSharp','uFilSpeed','uBoltW','uBoltSpeed',
+     'uCoreSpin','uWarp','uScale','uGain','uCoreI','uRingI','uFilI','uBoltI','uPlasmaI',
+     'uRimI','uColA','uColB','uColC','uColR'].forEach(function(n){
+      U[n]=gl.getUniformLocation(pr,n);
+    });
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);        /* additive — it's a light source */
+    gl.clearColor(0,0,0,0);
+  }
+
+  function resize(){
+    if(!glOK) return;
+    var dpr = Math.min(window.devicePixelRatio||1, 2);
+    var w = Math.max(1, Math.round(cv.clientWidth  * dpr));
+    var h = Math.max(1, Math.round(cv.clientHeight * dpr));
+    if(cv.width!==w || cv.height!==h){ cv.width=w; cv.height=h; }
+    gl.viewport(0,0,cv.width,cv.height);
+  }
+  window.addEventListener('resize',resize);
+
+  /* ── CSS-side params ── */
+  function applyCss(){
+    var s = document.documentElement.style;
+    s.setProperty('--idx-logo-size',   P.logoSize+'px');
+    s.setProperty('--idx-canvas-size', P.canvasSize+'px');
+    s.setProperty('--idx-glow',        P.glow);
+    s.setProperty('--idx-bed',         P.bed);
+    s.setProperty('--idx-flow-dur',    P.flowDur+'s');
+    s.setProperty('--idx-flow-op',     P.flowOp);
+    s.setProperty('--idx-heat-dur',    P.heatDur+'s');
+    s.setProperty('--idx-heat-op',     P.heatOp);
+    s.setProperty('--idx-float-dur',   P.floatDur+'s');
+    s.setProperty('--idx-float-amt',   P.floatAmt+'px');
+    s.setProperty('--idx-breathe-dur', P.breatheDur+'s');
+    document.body.classList.toggle('idx-fx-paused', !!P.paused);
+    resize();
+  }
+
+  /* ── pointer parallax ── */
+  var ptr=[0,0], ptrT=[0,0];
+  var hero = document.querySelector('.idx-hero');
+  hero.addEventListener('pointermove',function(ev){
+    var b=this.getBoundingClientRect();
+    ptrT[0] = ((ev.clientX-b.left)/b.width  - 0.5)*2;
+    ptrT[1] = -((ev.clientY-b.top )/b.height - 0.5)*2;
+  });
+  hero.addEventListener('pointerleave',function(){ ptrT[0]=ptrT[1]=0; });
+
+  /* Pause when the tab is backgrounded. `queued` guards against a second rAF
+     loop being started if visibilitychange ever fires visible twice. */
+  var t0=performance.now(), clock=0, wall=0, running=true, queued=false;
+  var frames=0, fpsT=performance.now(), fpsEl=null;
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){ running=false; return; }
+    if(running) return;
+    running=true; t0 = performance.now() - wall*1000;
+    if(!queued){ queued=true; requestAnimationFrame(frame); }
+  });
+
+  function frame(now){
+    queued=false;
+    if(!running) return;
+    var prev = wall;
+    wall = (now-t0)/1000;
+    if(!P.paused) clock += (wall-prev)*P.speed;   /* master speed scales the clock */
+
+    if(glOK){
+      resize();
+      ptr[0]+=(ptrT[0]-ptr[0])*0.06;
+      ptr[1]+=(ptrT[1]-ptr[1])*0.06;
+      /* intro charge-up: the reactor spins up over the first ~1.8s */
+      var c = Math.min(wall/1.8, 1); c = 1-Math.pow(1-c,3);
+      gl.uniform2f(U.uRes, cv.width, cv.height);
+      gl.uniform1f(U.uT, clock);
+      gl.uniform2f(U.uPtr, ptr[0]*P.parallax, ptr[1]*P.parallax);
+      gl.uniform1f(U.uCharge, c);
+      gl.uniform1f(U.uRingR,P.ringR);     gl.uniform1f(U.uRingW,P.ringW);
+      gl.uniform1f(U.uRingGap,P.ringGap); gl.uniform1f(U.uArcFreq,P.arcFreq);
+      gl.uniform1f(U.uArcSpeed,P.arcSpeed);
+      gl.uniform1f(U.uHoleIn,P.holeIn);   gl.uniform1f(U.uHoleOut,P.holeOut);
+      gl.uniform1f(U.uFilCount,P.filCount); gl.uniform1f(U.uFilSharp,P.filSharp);
+      gl.uniform1f(U.uFilSpeed,P.filSpeed);
+      gl.uniform1f(U.uBoltW,P.boltW);     gl.uniform1f(U.uBoltSpeed,P.boltSpeed);
+      gl.uniform1f(U.uCoreSpin,P.coreSpin);
+      gl.uniform1f(U.uWarp,P.warp);       gl.uniform1f(U.uScale,P.scale);
+      gl.uniform1f(U.uGain,P.gain);       gl.uniform1f(U.uCoreI,P.coreI);
+      gl.uniform1f(U.uRingI,P.ringI);     gl.uniform1f(U.uFilI,P.filI);
+      gl.uniform1f(U.uBoltI,P.boltI);     gl.uniform1f(U.uPlasmaI,P.plasmaI);
+      gl.uniform1f(U.uRimI,P.rimI);
+      gl.uniform3fv(U.uColA,hex2rgb(P.colA)); gl.uniform3fv(U.uColB,hex2rgb(P.colB));
+      gl.uniform3fv(U.uColC,hex2rgb(P.colC)); gl.uniform3fv(U.uColR,hex2rgb(P.colR));
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+    }
+    frames++;
+    if(now-fpsT>500 && fpsEl){ fpsEl.textContent=Math.round(frames/((now-fpsT)/1000))+' fps'; fpsT=now; frames=0; }
+    queued=true; requestAnimationFrame(frame);
+  }
+
+  applyCss();
+  resize();
+  cv.classList.add('ready');
+  queued=true; requestAnimationFrame(frame);
+
+  /* ════════════════════════ control panel ════════════════════════ */
+  function el(tag,cls,html){ var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+  function fmt(v){ var a=Math.abs(v); return a>=100?v.toFixed(0):a>=10?v.toFixed(1):String(Math.round(v*1000)/1000); }
+  var rows = {};
+
+  var panel = el('div'); panel.id='fxpanel';
+  var head  = el('div','wp-head','<b>Logo FX · controls</b><span class="wp-fps"></span>');
+  var hide  = el('button','wp-x','–'); hide.title='Close (H)';
+  head.appendChild(hide); panel.appendChild(head);
+  fpsEl = head.querySelector('.wp-fps');
+
+  var body = el('div','wp-body'); panel.appendChild(body);
+
+  /* presets */
+  var pb = el('div','wp-btns');
+  Object.keys(PRESETS).forEach(function(name){
+    var b = el('button','wp-btn',name);
+    b.onclick = function(){
+      Object.keys(DEFAULTS).forEach(function(k){ P[k]=DEFAULTS[k]; });
+      Object.keys(PRESETS[name]).forEach(function(k){ P[k]=PRESETS[name][k]; });
+      syncUI(); applyCss(); save();
+    };
+    pb.appendChild(b);
+  });
+  body.appendChild(pb);
+
+  /* actions */
+  var ab = el('div','wp-btns');
+  [['Copy params', function(){
+      var s = '/* GreenStreets index hero FX params */\n' + JSON.stringify(P,null,2);
+      (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(
+        function(){ toast('Params copied — paste them back to Claude.'); },
+        function(){ window.prompt('Copy these params:', s); });
+    }, 'pri'],
+   ['Paste params', function(){
+      var s = window.prompt('Paste a params JSON blob:');
+      if(!s) return;
+      try{
+        var o = JSON.parse(s.replace(/^\s*\/\*[\s\S]*?\*\/\s*/,''));
+        Object.keys(o).forEach(function(k){ if(k in P) P[k]=o[k]; });
+        syncUI(); applyCss(); save(); toast('Params applied.');
+      }catch(e){ toast('That was not valid JSON.'); }
+    }],
+   ['Reset', function(){
+      /* mutate in place — rebinding P would strand window.IDX_FX and any
+         other reference already handed out */
+      Object.keys(DEFAULTS).forEach(function(k){ P[k]=DEFAULTS[k]; });
+      syncUI(); applyCss(); save();
+    }]
+  ].forEach(function(d){
+    var b=el('button','wp-btn'+(d[2]?' '+d[2]:''),d[0]); b.onclick=d[1]; ab.appendChild(b);
+  });
+  body.appendChild(ab);
+
+  /* sliders */
+  SPEC.forEach(function(g){
+    var d = el('details','wp-grp'); d.open = !!g.open;
+    d.appendChild(el('summary',null,g.g));
+    var inner = el('div','wp-grp-in');
+    g.p.forEach(function(r){
+      var key=r[0];
+      var row = el('div','wp-row');
+      row.appendChild(el('label',null,r[1]));
+      var val = el('span','wp-val',fmt(P[key])); row.appendChild(val);
+      var sl = document.createElement('input');
+      sl.type='range'; sl.min=r[2]; sl.max=r[3]; sl.step=r[4]; sl.value=P[key];
+      sl.oninput = function(){
+        P[key] = parseFloat(sl.value); val.textContent = fmt(P[key]);
+        applyCss(); save();
+      };
+      row.appendChild(sl);
+      rows[key] = {sl:sl, val:val};
+      inner.appendChild(row);
+    });
+    d.appendChild(inner); body.appendChild(d);
+  });
+
+  /* colours + toggles */
+  var cg = el('details','wp-grp'); cg.open=false;
+  cg.appendChild(el('summary',null,'Colours'));
+  var cgi = el('div','wp-grp-in');
+  COLORS.forEach(function(c){
+    var row = el('div','wp-crow'); row.appendChild(el('span',null,c[1]));
+    var inp = document.createElement('input'); inp.type='color'; inp.value=P[c[0]];
+    inp.oninput = function(){ P[c[0]]=inp.value; save(); };
+    row.appendChild(inp); rows[c[0]]={sl:inp}; cgi.appendChild(row);
+  });
+  TOGGLES.forEach(function(t){
+    var row = el('div','wp-crow'); row.appendChild(el('span',null,t[1]));
+    var inp = document.createElement('input'); inp.type='checkbox'; inp.checked=!!P[t[0]];
+    inp.onchange = function(){ P[t[0]]=inp.checked; applyCss(); save(); };
+    row.appendChild(inp); rows[t[0]]={sl:inp,chk:true}; cgi.appendChild(row);
+  });
+  cg.appendChild(cgi); body.appendChild(cg);
+
+  body.appendChild(el('div','wp-note',
+    'Tweak, then <b>Copy params</b> and paste the JSON back to Claude to bake it in as the default. Settings persist in this browser. Press <b>H</b> to toggle this panel.'));
+
+  document.body.appendChild(panel);
+
+  var toggle = el('button',null,'◧ Logo FX'); toggle.id='fxToggle';
+  document.body.appendChild(toggle);
+
+  function open(v){
+    panel.classList.toggle('open', v);
+    toggle.style.display = v ? 'none' : '';
+  }
+  toggle.onclick = function(){ open(true); };
+  hide.onclick    = function(){ open(false); };
+  document.addEventListener('keydown', function(ev){
+    if(ev.key==='h' || ev.key==='H'){
+      var tag = (ev.target.tagName||'').toLowerCase();
+      if(tag==='input'||tag==='textarea'||tag==='select') return;
+      open(!panel.classList.contains('open'));
+    }
+  });
+  if(/[?&]fx=1/.test(location.search)) open(true);
+
+  function syncUI(){
+    Object.keys(rows).forEach(function(k){
+      var r = rows[k];
+      if(r.chk) r.sl.checked = !!P[k];
+      else      r.sl.value   = P[k];
+      if(r.val) r.val.textContent = fmt(P[k]);
+    });
+  }
+
+  var tEl;
+  function toast(msg){
+    if(!tEl){
+      tEl = el('div',null,'');
+      tEl.style.cssText='position:fixed;bottom:60px;right:16px;z-index:9999;'+
+        'background:rgba(14,26,22,.94);border:1px solid rgba(143,227,182,.4);color:#d7ffe9;'+
+        'padding:9px 14px;border-radius:9px;font:600 11.5px Inter,system-ui,sans-serif;'+
+        'box-shadow:0 10px 30px rgba(0,0,0,.45);opacity:0;transition:opacity .2s';
+      document.body.appendChild(tEl);
+    }
+    tEl.textContent = msg; tEl.style.opacity='1';
+    clearTimeout(tEl._t);
+    tEl._t = setTimeout(function(){ tEl.style.opacity='0'; }, 2600);
+  }
+
+  window.IDX_FX = P;   /* handy for console tweaking */
+})();
+</script>
+</body>
+</html>
