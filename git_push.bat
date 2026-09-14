@@ -4,18 +4,37 @@ title GreenStreets - Git Auto Push
 color 0A
 
 :: ============================================================================
-::  GreenStreets Prototypes - One-Click Commit & Push to GitHub
-::  Repo: https://github.com/loumizhu/GreenStreets_Prototypes
+::  GreenStreets Prototypes - One-Click Commit ^& Push to GitHub
+::  Repo: https://github.com/loumizhu/Prototypes-Generic
+::
+::  This is the BRAND-NEUTRAL pack. The old branded repo
+::  (loumizhu/GreenStreets_Prototypes) is still wired up as the remote
+::  "old-branded" and is NOT pushed to by this script.
 :: ============================================================================
 
-set "REPO=d:\((_atWork_))\DuneTech\GreenStreets-UI-UX\Prototypes"
+set "REPO=%~dp0"
+if "%REPO:~-1%"=="\" set "REPO=%REPO:~0,-1%"
 cd /d "%REPO%"
 
 echo.
 echo  +======================================================+
 echo  ^|       GreenStreets  -  GitHub Auto Push              ^|
+echo  ^|       Prototypes-Generic ^(brand-neutral^)             ^|
 echo  +======================================================+
 echo.
+
+:: -- Step 0: Make sure we are pushing where we think we are ------------------
+git remote get-url origin > "%TEMP%\gs_origin.txt" 2>&1
+findstr /C:"Prototypes-Generic" "%TEMP%\gs_origin.txt" >nul 2>&1
+if errorlevel 1 (
+    echo  [!!] ERROR: 'origin' does not point at Prototypes-Generic.
+    echo       Current origin:
+    type "%TEMP%\gs_origin.txt"
+    echo.
+    echo       Fix with:
+    echo         git remote set-url origin https://github.com/loumizhu/Prototypes-Generic.git
+    goto :FAIL
+)
 
 :: -- Step 1: Check for anything to commit ------------------------------------
 echo  [1/5] Checking for changes...
@@ -37,7 +56,9 @@ echo  Found changes:
 git status --short
 echo.
 
-:: -- Step 2: Bump the push counter & stamp it into index.html ----------------
+:: -- Step 2: Bump the push counter ^& stamp it into index.html ----------------
+::  The index hero shows the build number as:  <span class="idx-build"><i></i>Build NN</span>
+::  (it used to read "Version/Push Number : NN" - that text no longer exists).
 echo  [2/5] Updating push number...
 set "COUNTFILE=%REPO%\.push-count"
 set "PUSHNUM="
@@ -46,7 +67,7 @@ if exist "%COUNTFILE%" (
 )
 :: no counter file yet ^(or it's empty^): fall back to the number in index.html
 if not defined PUSHNUM (
-    for /f %%N in ('powershell -NoProfile -Command "$m=[regex]::Match([IO.File]::ReadAllText((Join-Path '%REPO%' 'index.html')),'Version/Push Number : (\d+)'); if($m.Success){$m.Groups[1].Value}else{0}"') do set "PUSHNUM=%%N"
+    for /f %%N in ('powershell -NoProfile -Command "$m=[regex]::Match([IO.File]::ReadAllText((Join-Path '%REPO%' 'index.html')),'Build (\d+)</span>'); if($m.Success){$m.Groups[1].Value}else{0}"') do set "PUSHNUM=%%N"
 )
 if not defined PUSHNUM set "PUSHNUM=0"
 
@@ -58,12 +79,12 @@ if errorlevel 1 set /a PUSHNUM=1
 powershell -NoProfile -Command ^
   "$f = Join-Path '%REPO%' 'index.html';" ^
   "$t = [IO.File]::ReadAllText($f);" ^
-  "$n = $t -replace 'Version/Push Number : \d+', 'Version/Push Number : %PUSHNUM%';" ^
+  "$n = $t -replace 'Build \d+</span>', 'Build %PUSHNUM%</span>';" ^
   "if ($n -ne $t) { [IO.File]::WriteAllText($f, $n); exit 0 } else { exit 3 }"
 if errorlevel 3 (
-    echo  [!] Warning: 'Version/Push Number : NN' not found ^(or unchanged^) in index.html.
+    echo  [!] Warning: 'Build NN^</span^>' not found ^(or unchanged^) in index.html.
 ) else (
-    echo  [OK] index.html updated to push number %PUSHNUM%.
+    echo  [OK] index.html updated to build number %PUSHNUM%.
 )
 echo  Total pushes so far: %PUSHNUM%
 echo.
@@ -115,7 +136,7 @@ echo  ^|   SUCCESS!  All changes pushed to GitHub!            ^|
 echo  ^|%BOXLINE%^|
 echo  ^|                                                      ^|
 echo  ^|   https://github.com/loumizhu/                       ^|
-echo  ^|   GreenStreets_Prototypes                            ^|
+echo  ^|   Prototypes-Generic                                 ^|
 echo  ^|                                                      ^|
 echo  +======================================================+
 echo.
